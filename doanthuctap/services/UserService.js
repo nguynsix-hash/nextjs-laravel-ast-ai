@@ -18,8 +18,13 @@ const UserService = {
 
     // Cập nhật user
     update: (id, data) => {
+        // Nếu là FormData, dùng POST với _method=PUT để Laravel xử lý file upload
+        if (data instanceof FormData) {
+            data.append('_method', 'PUT');
+            return httpAxios.post(`users/${id}`, data);
+        }
         return httpAxios.put(`users/${id}`, data);
-    }, 
+    },
 
     // Xóa user
     remove: (id) => {

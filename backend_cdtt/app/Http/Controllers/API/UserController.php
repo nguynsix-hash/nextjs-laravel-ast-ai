@@ -108,15 +108,28 @@ class UserController extends Controller
             'password' => 'nullable|string|min:6',
             'roles' => 'nullable|string',
             'status' => 'sometimes|required|in:0,1',
+            'avatar' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:2048' // Add avatar validation
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success'=>false,'errors'=>$validator->errors()],422);
         }
 
-        $data = $request->all();
-        if(isset($data['password'])) {
-            $data['password'] = $data['password']; // Mutator hash tự động
+        $data = $request->except(['avatar']); // Exclude avatar from direct assignment first
+
+        // Handle Avatar Upload
+        if ($request->hasFile('avatar')) {
+             $file = $request->file('avatar');
+             $ext = $file->extension();
+             $filename = time() . '-' . 'avatar-' . $id . '.' . $ext;
+             $file->move(public_path('images/avatar'), $filename);
+             $data['avatar'] = asset('images/avatar/' . $filename);
+        }
+
+        if(isset($data['password']) && $data['password']) {
+            // Password mutator handles hashing
+        } else {
+             unset($data['password']); // Don't update password if empty/null
         }
 
         $user->update($data);

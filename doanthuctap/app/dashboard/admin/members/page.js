@@ -8,7 +8,7 @@ import UserService from "@/services/UserService"; // Import UserService
 const StatusBadge = ({ status }) => {
     const baseClass = "px-3 py-1 text-xs font-semibold rounded-full inline-flex items-center ring-1";
     // Giả định 1 = active/hoạt động, 0 = inactive/khóa
-    const isActive = status === 1; 
+    const isActive = status === 1;
 
     return isActive ? (
         <span className={`${baseClass} bg-green-50 text-green-700 ring-green-600/20`}>
@@ -55,9 +55,9 @@ export default function MembersManagement() {
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState("all"); // 'all', '1', '0'
-    
+
     const [currentPage, setCurrentPage] = useState(1);
-    const [limit, setLimit] = useState(10); 
+    const [limit, setLimit] = useState(10);
 
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
@@ -74,7 +74,7 @@ export default function MembersManagement() {
                 page: currentPage,
                 per_page: limit,
                 // Tìm kiếm theo name, email, hoặc phone (giả định API Controller xử lý)
-                search: search || undefined, 
+                search: search || undefined,
                 // Lọc theo status (chuyển về số 1 hoặc 0 nếu không phải 'all')
                 status: filterStatus !== "all" ? Number(filterStatus) : undefined,
                 // Giả định API controller hỗ trợ sort theo created_at
@@ -83,7 +83,7 @@ export default function MembersManagement() {
             };
 
             const res = await UserService.getAll(params); // API trả về { success, data: { data: [], total, last_page, ... } }
-            
+
             const data = res.data;
             setUsers(data.data || []);
             setTotal(data.total || 0);
@@ -113,7 +113,7 @@ export default function MembersManagement() {
         if (!confirm(`Bạn có chắc chắn muốn xóa thành viên "${name}" (ID: ${id})?`)) return;
 
         try {
-            await UserService.remove(id); 
+            await UserService.remove(id);
             alert(`Xóa thành viên ID: ${id} thành công!`);
             loadUsers(); // Reload danh sách
         } catch (error) {
@@ -121,7 +121,7 @@ export default function MembersManagement() {
             alert("Lỗi khi xóa thành viên. Vui lòng kiểm tra console.");
         }
     };
-    
+
     // Chuyển trang
     const goToPage = (pageNumber) => {
         if (pageNumber > 0 && pageNumber <= totalPages) {
@@ -138,7 +138,7 @@ export default function MembersManagement() {
                         (Tổng {total} mục)
                     </span>
                 </h1>
-                
+
                 {/* Add Button */}
                 <button
                     onClick={() => router.push("/dashboard/admin/members/add")}
@@ -151,7 +151,7 @@ export default function MembersManagement() {
             {/* SEARCH + FILTER SECTION */}
             <div className="bg-white p-5 rounded-xl shadow-lg mb-8 border border-gray-200">
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-start">
-                    
+
                     {/* Search Input */}
                     <div className="relative w-full sm:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -183,6 +183,7 @@ export default function MembersManagement() {
                     <thead className="bg-gray-100">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-16">ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-20">Avatar</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Thông tin Cơ bản</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32">Vai trò</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32">Trạng thái</th>
@@ -193,7 +194,7 @@ export default function MembersManagement() {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {loading ? (
                             <tr>
-                                <td colSpan="6" className="text-center py-10 text-blue-500">
+                                <td colSpan="7" className="text-center py-10 text-blue-500">
                                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                                     Đang tải dữ liệu thành viên...
                                 </td>
@@ -202,6 +203,16 @@ export default function MembersManagement() {
                             users.map(user => (
                                 <tr key={user.id} className="hover:bg-gray-50 transition duration-100">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{user.id}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        <div className="relative w-10 h-10">
+                                            <img
+                                                src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=random`}
+                                                alt="avt"
+                                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                                                onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${user.name}&background=random` }}
+                                            />
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                                         <div className="font-semibold text-gray-800">{user.name}</div>
                                         <div className="text-gray-500 text-xs">{user.email} | SĐT: {user.phone || 'N/A'}</div>
@@ -251,10 +262,10 @@ export default function MembersManagement() {
             {/* PAGINATION CONTROLS */}
             {total > 0 && (
                 <div className="flex flex-col sm:flex-row justify-between items-center mt-8 p-5 bg-white rounded-xl shadow-lg border border-gray-200">
-                    
+
                     {/* Info */}
                     <p className="text-sm font-medium text-gray-700 mb-4 sm:mb-0">
-                        Hiển thị 
+                        Hiển thị
                         <span className="font-semibold text-blue-600 mx-1">
                             {Math.min(currentPage * limit - limit + 1, total)}
                         </span>
@@ -262,7 +273,7 @@ export default function MembersManagement() {
                         <span className="font-semibold text-blue-600 mx-1">
                             {Math.min(currentPage * limit, total)}
                         </span>
-                        / 
+                        /
                         <span className="font-semibold text-blue-600 mx-1">
                             {total}
                         </span>
@@ -287,9 +298,8 @@ export default function MembersManagement() {
                         <button
                             onClick={() => goToPage(currentPage - 1)}
                             disabled={currentPage === 1}
-                            className={`p-2 rounded-full transition duration-150 ${
-                                currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md'
-                            }`}
+                            className={`p-2 rounded-full transition duration-150 ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md'
+                                }`}
                         >
                             <ChevronLeft size={18} />
                         </button>
@@ -303,9 +313,8 @@ export default function MembersManagement() {
                         <button
                             onClick={() => goToPage(currentPage + 1)}
                             disabled={currentPage === totalPages}
-                            className={`p-2 rounded-full transition duration-150 ${
-                                currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md'
-                            }`}
+                            className={`p-2 rounded-full transition duration-150 ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md'
+                                }`}
                         >
                             <ChevronRight size={18} />
                         </button>

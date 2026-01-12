@@ -59,10 +59,15 @@ export default function Header() {
     fetchCategories();
 
     // Load cart lần đầu
+    // Load cart lần đầu
     updateCartBadge();
 
     // Lắng nghe sự kiện update cart từ CartService
     window.addEventListener("cartUpdate", updateCartBadge);
+
+    // Lắng nghe sự kiện update user info (avatar, name)
+    const handleUserUpdate = () => setUser(getUser());
+    window.addEventListener("userUpdate", handleUserUpdate);
 
     // Click ngoài menu user để đóng
     const handleClickOutside = (e) => {
@@ -74,6 +79,7 @@ export default function Header() {
 
     return () => {
       window.removeEventListener("cartUpdate", updateCartBadge);
+      window.removeEventListener("userUpdate", handleUserUpdate);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
@@ -161,14 +167,23 @@ export default function Header() {
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center space-x-1 p-1.5 md:p-2 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
             >
-              <div className="bg-indigo-100 p-1 rounded-full text-indigo-600">
-                <User size={20} />
-              </div>
+              {user && (user.avatar || user.name) ? (
+                <div className="w-8 h-8 relative rounded-full overflow-hidden border border-indigo-100">
+                  <img
+                    src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=6366f1&color=fff`}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="bg-indigo-100 p-1 rounded-full text-indigo-600">
+                  <User size={20} />
+                </div>
+              )}
               <ChevronDown
                 size={14}
-                className={`text-gray-400 transition-transform ${
-                  showUserMenu ? "rotate-180" : ""
-                }`}
+                className={`text-gray-400 transition-transform ${showUserMenu ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -206,7 +221,7 @@ export default function Header() {
                       Thông tin cá nhân
                     </a>
                     <a
-                      href="/main/account/orders"
+                      href="/main/account/profile"
                       className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 rounded-lg transition-colors"
                     >
                       Đơn hàng của tôi

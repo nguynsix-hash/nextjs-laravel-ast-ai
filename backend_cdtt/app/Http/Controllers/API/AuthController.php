@@ -178,4 +178,86 @@ class AuthController extends Controller
             ], 401);
         }
     }
+    // ===== CHANGE PASSWORD =====
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'old_password' => 'required',
+            'password' => 'required|min:6|confirmed', // password_confirmation
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = JWTAuth::user();
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->old_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mật khẩu cũ không chính xác'
+            ], 400);
+        }
+
+        // Tự động hash qua User model mutator hoặc thủ công nếu cần
+        // Ở model User đã có mutator setPasswordAttribute
+        $user->update([
+            'password' => $request->password
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đổi mật khẩu thành công'
+        ]);
+    }
+
+    // ===== UPDATE PROFILE =====
+    public function updateProfile(Request $request) 
+    {
+        $user = JWTAuth::user();
+        
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            'phone' => 'sometimes|required|string|max:20',
+            'address' => 'nullable|string',
+            'avatar' => 'nullable|file|mimes:jpg,jpeg,png,gif|max:2048' // Validate file ảnh
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $data = $request->only(['name', 'phone', 'address']);
+
+        // Xử lý upload Avatar
+        if ($request->hasFile('avatar')) {
+             $file = $request->file('avatar');
+             $ext = $file->extension();
+             $filename = time() . '-' . 'avatar' . '.' . $ext;
+             
+             // Move file vào public/images/avatar
+             $file->move(public_path('images/avatar'), $filename);
+             
+             // Lưu đường dẫn đầy đủ hoặc tương đối
+             // Ở đây lưu absolute URL hoặc path tương đối tuỳ logic hiển thị frontend. 
+             // Frontend đang dùng `user.avatar` trực tiếp vào src.
+             $data['avatar'] = asset('images/avatar/' . $filename);
+        }
+
+        $user->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật thông tin thành công',
+            'data' => $user
+        ]);
+    }
 }

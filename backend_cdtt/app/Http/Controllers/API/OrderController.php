@@ -16,7 +16,8 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with('details');
+        $query = Order::with('details.product');
+
 
         // Filter theo status
         if ($request->has('status')) {
@@ -53,6 +54,19 @@ class OrderController extends Controller
             $data = $query->paginate($perPage);
         }
 
+        // Thêm tính toán Total cho mỗi đơn hàng
+        if ($data instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+            $data->getCollection()->transform(function ($order) {
+                $order->total = $order->details->sum('amount');
+                return $order;
+            });
+        } else {
+            $data->transform(function ($order) {
+                $order->total = $order->details->sum('amount');
+                return $order;
+            });
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Danh sách đơn hàng',
@@ -75,6 +89,8 @@ class OrderController extends Controller
                 'message' => 'Không tìm thấy đơn hàng'
             ], 404);
         }
+
+        $order->total = $order->details->sum('amount');
 
         return response()->json([
             'success' => true,
@@ -215,6 +231,55 @@ class OrderController extends Controller
         'data' => $order
     ]);
 }
+
+    /**
+     * POST /api/cancel-order/{id}
+     * Hủy đơn hàng (chỉ khi status = 1 (pending))
+     */
+    public function cancelOrder(Request $request, $id)
+    {
+        // Lấy user hiện tại từ token (nếu dùng middleware auth:api)
+        // Tuy nhiên ở đây controller có thể được dùng chung. 
+        // Nhưng route cancel-order được bảo vệ bởi middleware auth:api.
+        
+        $user = \Tymon\JWTAuth\Facades\JWTAuth::user();
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy đơn hàng'
+            ], 404);
+        }
+
+        // Check quyền sở hữu
+        if ($order->user_id != $user->id && $user->roles !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn không có quyền hủy đơn hàng này'
+            ], 403);
+        }
+
+        // Chỉ hủy được khi status = 1 (Chờ xử lý)
+        if ($order->status != 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng không thể hủy ở trạng thái này'
+            ], 400);
+        }
+
+        $order->status = 4; // 4 = Đã hủy (Giả định enum status: 1=Pending, 2=Confirmed, 3=Shipping, 4=Cancelled)
+        // Hoặc Status = 0 tuỳ quy ước. Ở đây giả định 4.
+        // Check OrderController store method: status in:1,2,3,4. OK.
+        
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hủy đơn hàng thành công',
+            'data' => $order
+        ]);
+    }
 
     /**
      * DELETE /api/orders/{id}

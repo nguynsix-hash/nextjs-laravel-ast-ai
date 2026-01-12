@@ -9,12 +9,18 @@ httpAxios.interceptors.request.use(
     (config) => {
         if (typeof window !== "undefined") {
             let token = null;
+            const pathname = window.location.pathname;
 
-            // Nếu URL chứa 'admin', dùng token admin
-            if (config.url.includes("/auth/admin") || config.url.includes("/admin")) {
+            // Xác định xem có đang ở trang quản trị (dashboard/admin) hay không
+            // Dựa vào URL trình duyệt hoặc URL API
+            const isAdminRequest = config.url.includes("/auth/admin") ||
+                config.url.includes("/admin") ||
+                pathname.includes("/dashboard") ||
+                pathname.includes("/admin");
+
+            if (isAdminRequest) {
                 token = localStorage.getItem("admin_token");
             } else {
-                // Ngược lại, dùng token client
                 token = localStorage.getItem("client_token");
             }
 

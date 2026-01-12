@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Edit, User, Mail, Shield, Save, X, Loader2, Phone, Key, Lock, UserCheck } from "lucide-react";
+import { Edit, User, Mail, Shield, Save, X, Loader2, Phone, Key, Lock, UserCheck, Camera } from "lucide-react";
 import UserService from "@/services/UserService";
 
 export default function EditMember() {
@@ -19,7 +19,11 @@ export default function EditMember() {
         roles: "customer",
         status: 1,
         password: "", // Để trống nếu không đổi mật khẩu
+        avatarUrl: null
     });
+
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -47,6 +51,7 @@ export default function EditMember() {
                     roles: data.roles || "customer",
                     status: Number(data.status) ?? 1,
                     password: "", // Không load password, để trống
+                    avatarUrl: data.avatar
                 });
             } catch (err) {
                 console.error("Lỗi tải dữ liệu:", err);
@@ -60,6 +65,15 @@ export default function EditMember() {
         fetchMember();
     }, [memberId, router]);
 
+    // Handle File Change
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setAvatarFile(file);
+            setAvatarPreview(URL.createObjectURL(file));
+        }
+    };
+
     // ================= SUBMIT =================
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -67,22 +81,26 @@ export default function EditMember() {
         setErrors({});
 
         try {
-            const payload = {
-                name: form.name,
-                email: form.email,
-                username: form.username,
-                phone: form.phone || undefined,
-                address: form.address || undefined,
-                roles: form.roles,
-                status: Number(form.status),
-            };
+            const formData = new FormData();
+            formData.append('name', form.name);
+            formData.append('email', form.email);
+            formData.append('username', form.username);
+            formData.append('roles', form.roles);
+            formData.append('status', form.status);
+
+            if (form.phone) formData.append('phone', form.phone);
+            if (form.address) formData.append('address', form.address);
 
             // Chỉ gửi password nếu có nhập mới
             if (form.password && form.password.trim() !== "") {
-                payload.password = form.password;
+                formData.append('password', form.password);
             }
 
-            await UserService.update(memberId, payload);
+            if (avatarFile) {
+                formData.append('avatar', avatarFile);
+            }
+
+            await UserService.update(memberId, formData);
 
             alert("✅ Cập nhật thành viên thành công!");
             router.push("/dashboard/admin/members");
@@ -132,6 +150,23 @@ export default function EditMember() {
 
                 {/* FORM */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
+
+                    {/* AVATAR UPLOAD */}
+                    <div className="flex flex-col items-center justify-center mb-6">
+                        <div className="relative w-28 h-28 group">
+                            <img
+                                src={avatarPreview || form.avatarUrl || `https://ui-avatars.com/api/?name=${form.name}&background=random`}
+                                alt="Avatar"
+                                className="w-full h-full rounded-full object-cover border-4 border-slate-100 shadow-lg"
+                                onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${form.name}&background=random` }}
+                            />
+                            <label className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                                <Camera className="text-white" size={28} />
+                                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                            </label>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">Nhấn vào ảnh để thay đổi</p>
+                    </div>
 
                     {/* NAME */}
                     <div>

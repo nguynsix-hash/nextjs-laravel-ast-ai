@@ -7,6 +7,7 @@ import CartService from '@/services/CartService';
 import OrderService from '@/services/OrderService';
 import ProductService from '@/services/ProductService';
 import AuthService from '@/services/AuthService';
+import { getUser } from "@/utils/auth";
 
 // Components cơ bản (để tránh lỗi import nếu chưa có)
 const Image = ({ src, alt, className }) => <img src={src} alt={alt} className={className} loading="lazy" />;
@@ -46,8 +47,8 @@ export default function CheckoutPage() {
         // Load User Info nếu đã login
         const loadUserInfo = async () => {
             try {
-                // Giả sử có hàm lấy user từ localStorage hoặc API
-                const user = JSON.parse(localStorage.getItem('user'));
+                // Sử dụng getUser để lấy đúng key (client_user)
+                const user = getUser();
                 if (user) {
                     setRecipient(prev => ({
                         ...prev,
@@ -96,7 +97,7 @@ export default function CheckoutPage() {
             // Backend yêu cầu: user_id (opt), name, email, phone, address, note, status, details[]
 
             // Lấy user_id nếu có
-            const user = JSON.parse(localStorage.getItem('user'));
+            const user = getUser();
             const userId = user ? user.id : null;
 
             const payload = {

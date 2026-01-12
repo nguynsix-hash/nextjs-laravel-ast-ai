@@ -39,6 +39,14 @@ const OrderService = {
      */
     delete(id) {
         return httpAxios.delete(`orders/${id}`);
+    },
+
+    /**
+     * Hủy đơn hàng
+     * POST /auth/cancel-order/{id}
+     */
+    cancel(id) {
+        return httpAxios.post(`auth/cancel-order/${id}`);
     }
 };
 
