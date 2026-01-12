@@ -126,7 +126,7 @@ class OrderController extends Controller
                 'note' => $request->note,
                 'status' => $request->status,
                 'created_at' => now(),
-                'created_by' => 1
+                // 'created_by' => 1 // Tạm thời bỏ qua nếu chưa có Auth user thực tế để tránh lỗi foreign key k tồn tại
             ]);
 
             // 2️⃣ Tạo order_detail
@@ -141,19 +141,34 @@ class OrderController extends Controller
                 ]);
             }
 
+            // Load lại relation để gửi mail
+            $order->load('details.product');
+
+            // 3️⃣ Commit DB trước để chắc chắn đơn hàng được lưu
             DB::commit();
+
+            // 4️⃣ Gửi Email (Thực hiện sau khi commit thành công)
+            if ($request->email) {
+                try {
+                     \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\OrderConfirmMail($order));
+                } catch (\Throwable $mailException) { // Catch Throwable để bắt cả Error và Exception
+                    // Log lỗi mail nhưng không chặn response về client
+                    \Illuminate\Support\Facades\Log::error("Mail send failed: " . $mailException->getMessage());
+                }
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Tạo đơn hàng thành công',
-                'data' => $order->load('details')
+                'data' => $order
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Order create failed: " . $e->getMessage()); // Log chi tiết ra file log của Laravel
 
             return response()->json([
                 'success' => false,
-                'message' => 'Tạo đơn hàng thất bại',
+                'message' => 'Tạo đơn hàng thất bại: ' . $e->getMessage(), // Trả về lỗi chi tiết để debug
                 'error' => $e->getMessage()
             ], 500);
         }

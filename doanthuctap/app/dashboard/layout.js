@@ -5,6 +5,26 @@ import Footer from './footer';
 import Sidebar from './sidebar';
 // 👉 Bước 1: Import Toaster
 import { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { getAdminUser } from '@/utils/auth';
+
+// Component kiểm tra quyền truy cập (Internal Component)
+const AuthGuard = () => {
+    const router = useRouter();
+
+    useEffect(() => {
+        // Kiểm tra xem có user admin trong localStorage không
+        const adminUser = getAdminUser();
+
+        if (!adminUser) {
+            // Nếu không có, đá về trang login
+            router.replace('/auth/login');
+        }
+    }, [router]);
+
+    return null; // Component này không render gì cả
+};
 
 // Layout này áp dụng cho tất cả các trang nằm trong thư mục dashboard
 export default function DashboardLayout({ children }) {
@@ -25,6 +45,9 @@ export default function DashboardLayout({ children }) {
                     },
                 }}
             />
+
+            {/* 🛡️ AUTH GUARD: Kiểm tra quyền Admin */}
+            <AuthGuard />
 
             {/* 1. Header component (Sticky Top) */}
             <Header />

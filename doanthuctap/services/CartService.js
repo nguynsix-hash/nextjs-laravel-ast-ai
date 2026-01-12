@@ -11,7 +11,7 @@ const CartService = {
     let cart = CartService.getCart();
     // Tạo ID duy nhất cho biến thể (ID sản phẩm + màu + size)
     const cartItemId = `${product.id}-${color || ''}-${size || ''}`;
-    
+
     const existingItem = cart.find(item => item.cartItemId === cartItemId);
 
     if (existingItem) {
@@ -29,9 +29,15 @@ const CartService = {
       });
     }
     localStorage.setItem("cart", JSON.stringify(cart));
-    // Tạo một Event để các component khác (như Icon giỏ hàng trên Header) cập nhật kịp thời
     window.dispatchEvent(new Event("cartUpdate"));
     return cart;
+  },
+
+  // Xóa toàn bộ giỏ hàng
+  clearCart: () => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("cart");
+    window.dispatchEvent(new Event("cartUpdate"));
   }
 };
 

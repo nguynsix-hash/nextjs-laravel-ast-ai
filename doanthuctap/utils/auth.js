@@ -39,6 +39,6 @@ export const clearAdminAuth = () => {
 // ===================== UTILS =====================
 // Kiểm tra user có role admin
 export const isAdmin = () => {
-    const user = getUser(); // dùng client user
+    const user = getAdminUser(); // ✅ dùng admin user
     return user?.roles === "admin";
 };
