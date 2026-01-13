@@ -1,19 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     PlusCircle,
     Link as LinkIcon,
     Layers,
-    FileText,
     Globe,
     CheckCircle,
     XCircle,
     AlertTriangle,
-    Menu as MenuIcon
+    Menu as MenuIcon,
+    ChevronDown,
+    Loader2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MenuService from "@/services/MenuService";
+import CategoryService from "@/services/CategoryService";
+import TopicService from "@/services/TopicService";
+import PostService from "@/services/PostService";
 
 // ================= COMPONENT THÔNG BÁO =================
 const SystemMessage = ({ message, clearMessage }) => {
@@ -49,6 +53,7 @@ export default function AddMenu() {
 
     const [systemMessage, setSystemMessage] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [loadingSource, setLoadingSource] = useState(false);
 
     // ===== FORM STATE =====
     const [name, setName] = useState("");
@@ -58,7 +63,74 @@ export default function AddMenu() {
     const [parentId, setParentId] = useState(0);
     const [status, setStatus] = useState("active");
 
+    // ===== SOURCE DATA STATE =====
+    const [sourceItems, setSourceItems] = useState([]);
+    const [selectedSourceId, setSelectedSourceId] = useState("");
+
     const clearSystemMessage = () => setSystemMessage(null);
+
+    // ===== FETCH SOURCE DATA WHEN TYPE CHANGES =====
+    useEffect(() => {
+        const fetchSourceData = async () => {
+            // Reset source items and selection
+            setSourceItems([]);
+            setSelectedSourceId("");
+
+            if (type === "custom") return;
+
+            setLoadingSource(true);
+            try {
+                let items = [];
+
+                if (type === "category") {
+                    const res = await CategoryService.getAll({ status: 1 });
+                    items = res?.data?.data || res?.data || [];
+                } else if (type === "topic") {
+                    const res = await TopicService.getAll({ status: 1 });
+                    items = res?.data?.data || res?.data || [];
+                } else if (type === "page") {
+                    // Post with type = 'page'
+                    const res = await PostService.index({ status: 1, post_type: 'page' });
+                    items = res?.data?.data || res?.data || [];
+                }
+
+                setSourceItems(Array.isArray(items) ? items : []);
+            } catch (error) {
+                console.error("Fetch source error:", error);
+                setSystemMessage({ type: "error", text: "Không thể tải danh sách nguồn dữ liệu." });
+            }
+            setLoadingSource(false);
+        };
+
+        fetchSourceData();
+    }, [type]);
+
+    // ===== AUTO-FILL NAME & LINK WHEN SOURCE ITEM SELECTED =====
+    const handleSourceSelect = (e) => {
+        const itemId = e.target.value;
+        setSelectedSourceId(itemId);
+
+        if (!itemId) {
+            setName("");
+            setLink("");
+            return;
+        }
+
+        const item = sourceItems.find(i => String(i.id) === String(itemId));
+        if (item) {
+            // Set name
+            setName(item.name || item.title || "");
+
+            // Set link based on type
+            if (type === "category") {
+                setLink(`/main/product?category=${item.id}`);
+            } else if (type === "topic") {
+                setLink(`/main/post?topic=${item.id}`);
+            } else if (type === "page") {
+                setLink(`/main/post/${item.id}`);
+            }
+        }
+    };
 
     // ===== SUBMIT =====
     const handleSubmit = async (e) => {
@@ -78,7 +150,7 @@ export default function AddMenu() {
             link: link,
             parent_id: parentId,
             sort_order: 1,
-            table_id: null,
+            table_id: selectedSourceId || null,
             position: position,
             status: status === "active" ? 1 : 0,
         };
@@ -90,7 +162,7 @@ export default function AddMenu() {
 
             setSystemMessage({
                 type: "success",
-                text: res.data?.message || "Thêm menu thành công!",
+                text: res?.message || "Thêm menu thành công!",
             });
 
             setTimeout(() => {
@@ -117,7 +189,7 @@ export default function AddMenu() {
                     Thêm Menu Mới
                 </h1>
                 <p className="text-gray-500 text-sm mt-1">
-                    Tạo menu điều hướng cho website
+                    Tạo menu điều hướng cho website - Có thể thêm từ nguồn Category, Topic, hoặc Page
                 </p>
             </header>
 
@@ -126,6 +198,56 @@ export default function AddMenu() {
             {/* FORM */}
             <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
                 <form onSubmit={handleSubmit} className="space-y-6">
+
+                    {/* TYPE */}
+                    <div>
+                        <label className="block mb-2 font-semibold">Loại nguồn menu *</label>
+                        <div className="relative">
+                            <Layers className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-500" />
+                            <select
+                                value={type}
+                                onChange={(e) => setType(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 border rounded-lg bg-white appearance-none"
+                            >
+                                <option value="custom">✏️ Custom Link (Nhập thủ công)</option>
+                                <option value="category">📁 Thêm từ Category</option>
+                                <option value="topic">📂 Thêm từ Topic</option>
+                                <option value="page">📄 Thêm từ Post (type=page)</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        </div>
+                    </div>
+
+                    {/* SOURCE ITEM SELECTOR (only when type != custom) */}
+                    {type !== "custom" && (
+                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <label className="block mb-2 font-semibold text-purple-700">
+                                Chọn {type === "category" ? "Category" : type === "topic" ? "Topic" : "Page"} *
+                            </label>
+                            {loadingSource ? (
+                                <div className="flex items-center gap-2 text-purple-600">
+                                    <Loader2 className="animate-spin" size={18} />
+                                    Đang tải danh sách...
+                                </div>
+                            ) : sourceItems.length > 0 ? (
+                                <select
+                                    value={selectedSourceId}
+                                    onChange={handleSourceSelect}
+                                    className="w-full px-4 py-3 border rounded-lg bg-white"
+                                    required
+                                >
+                                    <option value="">-- Chọn một mục --</option>
+                                    {sourceItems.map((item) => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name || item.title} (ID: {item.id})
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <p className="text-gray-500 italic">Không có dữ liệu. Vui lòng kiểm tra nguồn.</p>
+                            )}
+                        </div>
+                    )}
 
                     {/* NAME */}
                     <div>
@@ -141,24 +263,9 @@ export default function AddMenu() {
                                 required
                             />
                         </div>
-                    </div>
-
-                    {/* TYPE */}
-                    <div>
-                        <label className="block mb-2 font-semibold">Loại menu *</label>
-                        <div className="relative">
-                            <Layers className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-500" />
-                            <select
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border rounded-lg bg-white"
-                            >
-                                <option value="custom">Custom Link</option>
-                                <option value="category">Category</option>
-                                <option value="page">Page</option>
-                                <option value="topic">Topic</option>
-                            </select>
-                        </div>
+                        {type !== "custom" && (
+                            <p className="text-xs text-gray-400 mt-1">* Tên sẽ tự động điền khi chọn mục từ nguồn</p>
+                        )}
                     </div>
 
                     {/* LINK */}
@@ -175,6 +282,9 @@ export default function AddMenu() {
                                 required
                             />
                         </div>
+                        {type !== "custom" && (
+                            <p className="text-xs text-gray-400 mt-1">* Link sẽ tự động điền khi chọn mục từ nguồn</p>
+                        )}
                     </div>
 
                     {/* POSITION */}
@@ -185,7 +295,7 @@ export default function AddMenu() {
                             onChange={(e) => setPosition(e.target.value)}
                             className="w-full px-4 py-3 border rounded-lg bg-white"
                         >
-                            <option value="mainmenu">Main Menu</option>
+                            <option value="mainmenu">Main Menu (Header)</option>
                             <option value="footermenu">Footer Menu</option>
                         </select>
                     </div>
@@ -198,8 +308,8 @@ export default function AddMenu() {
                             onChange={(e) => setStatus(e.target.value)}
                             className="w-full px-4 py-3 border rounded-lg bg-white"
                         >
-                            <option value="active">Kích hoạt</option>
-                            <option value="inactive">Không kích hoạt</option>
+                            <option value="active">✅ Kích hoạt</option>
+                            <option value="inactive">❌ Không kích hoạt</option>
                         </select>
                     </div>
 
@@ -207,8 +317,8 @@ export default function AddMenu() {
                     <div className="flex justify-end gap-4 pt-4">
                         <button
                             type="button"
-                            onClick={() => router.push("/dashboard/admin/menu")}
-                            className="px-6 py-3 bg-gray-200 rounded-lg font-semibold"
+                            onClick={() => router.push("/dashboard/admin/menus")}
+                            className="px-6 py-3 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300 transition"
                         >
                             Hủy
                         </button>
@@ -216,9 +326,10 @@ export default function AddMenu() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`px-6 py-3 rounded-lg font-semibold text-white
+                            className={`px-6 py-3 rounded-lg font-semibold text-white flex items-center gap-2
                                 ${loading ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
                         >
+                            {loading && <Loader2 className="animate-spin" size={18} />}
                             {loading ? "Đang lưu..." : "Thêm menu"}
                         </button>
                     </div>

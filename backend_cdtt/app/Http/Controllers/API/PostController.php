@@ -33,6 +33,11 @@ class PostController extends Controller
             $query->where('post_type', $request->post_type);
         }
 
+        // Filter theo slug (for static pages)
+        if ($request->has('slug')) {
+            $query->where('slug', $request->slug);
+        }
+
         // Search theo title, description, content
         if ($request->has('search')) {
             $search = $request->search;

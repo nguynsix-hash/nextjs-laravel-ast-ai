@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, Mail, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import ContactService from '@/services/ContactService';
+import ConfigService from '@/services/ConfigService';
 
 export default function ContactPage() {
     const [formData, setFormData] = useState({
@@ -12,6 +13,44 @@ export default function ContactPage() {
     });
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState({ type: '', message: '' });
+
+    // Config state for dynamic contact info
+    const [config, setConfig] = useState({
+        site_name: 'ESHOP',
+        email: 'contact@eshop.com',
+        phone: '0123 456 789',
+        hotline: '0123 456 789',
+        address: '215, Điện Biên Phủ, Hồ Chí Minh'
+    });
+    const [loadingConfig, setLoadingConfig] = useState(true);
+
+    // Fetch config on mount
+    useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const res = await ConfigService.getAll();
+                // httpAxios returns response.data directly
+                // res = { success: true, data: { data: [...] } } or paginated
+                const configData = res?.data?.data?.[0] || res?.data?.[0] || null;
+
+                if (configData) {
+                    setConfig({
+                        site_name: configData.site_name || 'ESHOP',
+                        email: configData.email || 'contact@eshop.com',
+                        phone: configData.phone || '0123 456 789',
+                        hotline: configData.hotline || '0123 456 789',
+                        address: configData.address || '215, Điện Biên Phủ, Hồ Chí Minh'
+                    });
+                }
+            } catch (error) {
+                console.error("Fetch config error:", error);
+                // Keep default values
+            }
+            setLoadingConfig(false);
+        };
+
+        fetchConfig();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -24,10 +63,18 @@ export default function ContactPage() {
         setStatus({ type: '', message: '' });
 
         try {
-            // Payload matches backend expectations: name, email, phone, content, status=1
+            // Check if user is logged in
+            let userId = null;
+            const userData = localStorage.getItem('client_user');
+            if (userData) {
+                const parsedUser = JSON.parse(userData);
+                userId = parsedUser?.id || null;
+            }
+
             const payload = {
                 ...formData,
-                status: 1 // Default status for new contact
+                user_id: userId,
+                status: 0 // 0 = Chờ xử lý, 1 = Đã phản hồi
             };
 
             const res = await ContactService.create(payload);
@@ -64,28 +111,45 @@ export default function ContactPage() {
 
                     {/* LEFT COLUMN: INFO & MAP */}
                     <div className="space-y-8">
-                        {/* Contact Info Cards */}
+                        {/* Contact Info Cards - Dynamic from Config */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Address Card */}
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
                                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
                                     <MapPin size={24} />
                                 </div>
                                 <h3 className="font-bold text-gray-900 mb-1">Địa chỉ</h3>
-                                <p className="text-sm text-gray-500">215, Điện Biên Phủ, Hồ Chí Minh</p>
+                                {loadingConfig ? (
+                                    <Loader2 className="animate-spin text-gray-400" size={16} />
+                                ) : (
+                                    <p className="text-sm text-gray-500">{config.address}</p>
+                                )}
                             </div>
+
+                            {/* Hotline Card */}
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
                                 <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-4">
                                     <Phone size={24} />
                                 </div>
                                 <h3 className="font-bold text-gray-900 mb-1">Hotline</h3>
-                                <p className="text-sm text-gray-500">0123 456 789</p>
+                                {loadingConfig ? (
+                                    <Loader2 className="animate-spin text-gray-400" size={16} />
+                                ) : (
+                                    <p className="text-sm text-gray-500">{config.hotline || config.phone}</p>
+                                )}
                             </div>
+
+                            {/* Email Card */}
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
                                 <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mb-4">
                                     <Mail size={24} />
                                 </div>
                                 <h3 className="font-bold text-gray-900 mb-1">Email</h3>
-                                <p className="text-sm text-gray-500">contact@eshop.com</p>
+                                {loadingConfig ? (
+                                    <Loader2 className="animate-spin text-gray-400" size={16} />
+                                ) : (
+                                    <p className="text-sm text-gray-500">{config.email}</p>
+                                )}
                             </div>
                         </div>
 

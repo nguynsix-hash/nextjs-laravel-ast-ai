@@ -108,7 +108,7 @@ const ArticleCard = ({ article }) => (
         <span className="flex items-center"><Clock className="h-3 w-3 mr-1 text-blue-500" />{new Date(article.created_at).toLocaleDateString('vi-VN')}</span>
         <span className="flex items-center"><Send className="h-3 w-3 mr-1 text-green-500" />Admin</span>
       </div>
-      <Link href={`/post/${article.slug}`} className="flex items-center text-blue-600 text-sm font-bold mt-4 hover:gap-2 transition-all">
+      <Link href={`/main/post/${article.id}`} className="flex items-center text-blue-600 text-sm font-bold mt-4 hover:gap-2 transition-all">
         Đọc chi tiết <ArrowRight className="h-4 w-4 ml-1" />
       </Link>
     </div>

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     FilePlus2,
@@ -11,8 +11,10 @@ import {
     Loader2,
     ChevronLeft,
     UploadCloud,
+    Link as LinkIcon,
 } from "lucide-react";
 import PostService from "@/services/PostService";
+import TopicService from "@/services/TopicService";
 import toast from "react-hot-toast";
 
 export default function AddPost() {
@@ -20,14 +22,61 @@ export default function AddPost() {
 
     // ===== STATE =====
     const [title, setTitle] = useState("");
+    const [slug, setSlug] = useState("");
     const [content, setContent] = useState("");
     const [description, setDescription] = useState("");
-    const [topicId, setTopicId] = useState(1);
+    const [topicId, setTopicId] = useState("");
     const [status, setStatus] = useState(1);
     const [postType, setPostType] = useState(0);
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Topics from API
+    const [topics, setTopics] = useState([]);
+    const [loadingTopics, setLoadingTopics] = useState(true);
+
+    // Fetch topics on mount
+    useEffect(() => {
+        const fetchTopics = async () => {
+            try {
+                const res = await TopicService.getAll({ status: 1 });
+                const topicsData = res?.data?.data || res?.data || [];
+                setTopics(Array.isArray(topicsData) ? topicsData : []);
+                // Set default topic if available
+                if (topicsData.length > 0) {
+                    setTopicId(topicsData[0].id);
+                }
+            } catch (error) {
+                console.error("Fetch topics error:", error);
+                toast.error("Không thể tải danh sách chủ đề");
+            }
+            setLoadingTopics(false);
+        };
+        fetchTopics();
+    }, []);
+
+    // Auto-generate slug from title
+    const generateSlug = (text) => {
+        return text
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+            .replace(/đ/g, "d")
+            .replace(/[^a-z0-9\s-]/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+            .trim();
+    };
+
+    const handleTitleChange = (e) => {
+        const newTitle = e.target.value;
+        setTitle(newTitle);
+        // Auto-generate slug if slug is empty or was auto-generated
+        if (!slug || slug === generateSlug(title)) {
+            setSlug(generateSlug(newTitle));
+        }
+    };
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -43,6 +92,7 @@ export default function AddPost() {
         try {
             const postData = {
                 title,
+                slug: slug || generateSlug(title),
                 content,
                 description,
                 topic_id: Number(topicId),
@@ -70,7 +120,7 @@ export default function AddPost() {
             {/* TOP BAR */}
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <button 
+                    <button
                         onClick={() => router.back()}
                         className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors"
                     >
@@ -99,7 +149,7 @@ export default function AddPost() {
 
             <main className="max-w-6xl mx-auto px-4 py-8">
                 <form id="post-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
+
                     {/* LEFT COLUMN: Main Content */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
@@ -108,10 +158,32 @@ export default function AddPost() {
                                 <input
                                     placeholder="Nhập tiêu đề hấp dẫn..."
                                     value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
+                                    onChange={handleTitleChange}
                                     required
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all text-lg font-medium"
                                 />
+                            </div>
+
+                            {/* SLUG FIELD */}
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                                    <LinkIcon size={16} className="text-indigo-500" />
+                                    Slug (URL thân thiện)
+                                </label>
+                                <div className="flex items-center">
+                                    <span className="px-3 py-3 bg-slate-100 text-slate-500 text-sm rounded-l-xl border border-r-0 border-slate-200">
+                                        /main/pages/
+                                    </span>
+                                    <input
+                                        placeholder="vd: about, privacy-policy, terms..."
+                                        value={slug}
+                                        onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                                        className="flex-1 px-4 py-3 rounded-r-xl border border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all"
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Dùng cho Static Pages. VD: "about" → /main/pages/about
+                                </p>
                             </div>
 
                             <div>
@@ -126,14 +198,14 @@ export default function AddPost() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Nội dung chi tiết</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Nội dung chi tiết (HTML)</label>
                                 <textarea
-                                    placeholder="Viết nội dung ở đây..."
+                                    placeholder="Viết nội dung HTML ở đây..."
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
                                     rows={12}
                                     required
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all"
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all font-mono text-sm"
                                 />
                             </div>
                         </div>
@@ -147,7 +219,7 @@ export default function AddPost() {
                                 <ImageIcon size={18} className="text-indigo-500" />
                                 Hình ảnh đại diện
                             </label>
-                            
+
                             {preview ? (
                                 <div className="relative group rounded-xl overflow-hidden border-2 border-indigo-100">
                                     <img src={preview} className="w-full h-48 object-cover transition-transform group-hover:scale-105 duration-500" />
@@ -182,21 +254,34 @@ export default function AddPost() {
                                     className="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none bg-slate-50 font-medium"
                                 >
                                     <option value={0}>Bài viết (Post)</option>
-                                    <option value={1}>Trang (Page)</option>
+                                    <option value={1}>Trang đơn (Page)</option>
                                 </select>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Chủ đề</label>
-                                <select
-                                    value={topicId}
-                                    onChange={(e) => setTopicId(Number(e.target.value))}
-                                    className="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none bg-slate-50 font-medium"
-                                >
-                                    <option value={1}>Tin tức</option>
-                                    <option value={2}>Sự kiện</option>
-                                    <option value={3}>Khuyến mãi</option>
-                                </select>
+                                {loadingTopics ? (
+                                    <div className="flex items-center gap-2 text-slate-400 p-3">
+                                        <Loader2 className="animate-spin" size={16} />
+                                        Đang tải...
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={topicId}
+                                        onChange={(e) => setTopicId(Number(e.target.value))}
+                                        className="w-full p-3 rounded-lg border border-slate-200 focus:border-indigo-500 outline-none bg-slate-50 font-medium"
+                                    >
+                                        {topics.length === 0 ? (
+                                            <option value="">Không có chủ đề</option>
+                                        ) : (
+                                            topics.map((topic) => (
+                                                <option key={topic.id} value={topic.id}>
+                                                    {topic.name}
+                                                </option>
+                                            ))
+                                        )}
+                                    </select>
+                                )}
                             </div>
 
                             <div>

@@ -197,6 +197,30 @@ export default function EditPost() {
                         {errors.title && <p className="text-red-500 text-xs mt-1 font-bold">{errors.title[0]}</p>}
                     </div>
 
+                    {/* SLUG */}
+                    <div>
+                        <label className="flex items-center gap-2 mb-2 font-black text-slate-700">
+                            🔗 Slug (URL thân thiện)
+                        </label>
+                        <div className="flex items-center">
+                            <span className="px-3 py-3 bg-slate-100 text-slate-500 text-sm rounded-l-xl border-2 border-r-0 border-slate-100">
+                                /main/pages/
+                            </span>
+                            <input
+                                type="text"
+                                value={form.slug}
+                                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                                className={`flex-1 px-4 py-3 rounded-r-xl border-2 transition-all outline-none ${errors.slug ? "border-red-500 shadow-sm" : "border-slate-100 focus:border-green-400"
+                                    }`}
+                                placeholder="vd: about, privacy-policy, terms..."
+                            />
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                            Dùng cho Static Pages. VD: "about" → /main/pages/about
+                        </p>
+                        {errors.slug && <p className="text-red-500 text-xs mt-1 font-bold">{errors.slug[0]}</p>}
+                    </div>
+
                     {/* TOPIC & POST_TYPE & STATUS */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 

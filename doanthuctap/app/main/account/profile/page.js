@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Key, ShoppingCart, LogOut, Loader2, Edit3, Save, ShieldCheck, AtSign, Lock, Camera, XCircle, X, Package, Eye } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Key, ShoppingCart, LogOut, Loader2, Edit3, Save, ShieldCheck, AtSign, Lock, Camera, XCircle, X, Package, Eye, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -238,6 +238,9 @@ export default function UserProfile() {
                             </button>
                             <button onClick={() => setActiveTab('orders')} className={`w-full flex items-center p-4 rounded-2xl transition ${activeTab === 'orders' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-600 hover:bg-gray-50'}`}>
                                 <ShoppingCart size={20} className="mr-3" /> Lịch sử mua hàng
+                            </button>
+                            <button onClick={() => router.push('/main/account/my-contacts')} className="w-full flex items-center p-4 rounded-2xl text-gray-600 hover:bg-gray-50 transition">
+                                <MessageSquare size={20} className="mr-3" /> Liên hệ của tôi
                             </button>
                             <button onClick={handleLogout} className="w-full flex items-center p-4 rounded-2xl text-red-500 hover:bg-red-50 mt-4 font-semibold">
                                 <LogOut size={20} className="mr-3" /> Đăng xuất

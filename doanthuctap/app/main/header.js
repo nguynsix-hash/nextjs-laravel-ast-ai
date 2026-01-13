@@ -15,7 +15,8 @@ import { useRouter } from "next/navigation";
 import { getUser, clearAuth } from "@/utils/auth";
 import { logout } from "@/services/AuthService";
 import CategoryService from "@/services/CategoryService";
-import CartService from "@/services/CartService"; // Service giỏ hàng
+import CartService from "@/services/CartService";
+import ConfigService from "@/services/ConfigService";
 
 export default function Header() {
   const router = useRouter();
@@ -24,6 +25,10 @@ export default function Header() {
   const [categories, setCategories] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+
+  // Config state for dynamic site name and hotline
+  // Use empty string initially to match server render, then load from cache/API in useEffect
+  const [config, setConfig] = useState({ site_name: '', hotline: '' });
 
   const userMenuRef = useRef(null);
 
@@ -45,6 +50,16 @@ export default function Header() {
     // Load user từ localStorage
     setUser(getUser());
 
+    // Load config from localStorage cache first (instant, no flash on subsequent visits)
+    const cachedConfig = localStorage.getItem('site_config');
+    if (cachedConfig) {
+      try {
+        setConfig(JSON.parse(cachedConfig));
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+
     // Load categories
     const fetchCategories = async () => {
       try {
@@ -57,6 +72,26 @@ export default function Header() {
       }
     };
     fetchCategories();
+
+    // Load config from API and update cache
+    const fetchConfig = async () => {
+      try {
+        const res = await ConfigService.getAll();
+        const configData = res?.data?.data?.[0] || res?.data?.[0] || null;
+        if (configData) {
+          const newConfig = {
+            site_name: configData.site_name || 'ESHOP',
+            hotline: configData.hotline || configData.phone || '1900 6868'
+          };
+          setConfig(newConfig);
+          // Cache to localStorage for next page load
+          localStorage.setItem('site_config', JSON.stringify(newConfig));
+        }
+      } catch (error) {
+        console.error("Fetch config error:", error);
+      }
+    };
+    fetchConfig();
 
     // Load cart lần đầu
     // Load cart lần đầu
@@ -109,10 +144,10 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo - Dynamic from Config */}
         <div className="flex flex-col min-w-[200px]">
           <a href="/main" className="text-2xl font-bold text-indigo-600 tracking-tight">
-            LORAMEN
+            {config.site_name}
           </a>
           <p className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">
             Công nghệ & Cuộc sống
@@ -140,11 +175,12 @@ export default function Header() {
 
         {/* Icons */}
         <div className="flex items-center space-x-3 md:space-x-6">
+          {/* Hotline - Dynamic from Config */}
           <div className="hidden sm:flex flex-col items-end text-xs font-semibold text-gray-500">
             <span className="text-gray-400 font-normal">Hotline:</span>
             <div className="flex items-center text-indigo-600">
               <Phone size={14} className="mr-1" />
-              1900 6868
+              {config.hotline}
             </div>
           </div>
 
