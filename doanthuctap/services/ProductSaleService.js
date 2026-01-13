@@ -40,6 +40,18 @@ const ProductSaleService = {
    */
   delete: (id) => {
     return httpAxios.delete(`product-sales/${id}`);
+  },
+
+  /**
+   * Import sản phẩm khuyến mãi từ file Excel/CSV
+   * @param {FormData} formData - Chứa file
+   */
+  import: (formData) => {
+    return httpAxios.post("product-sales/import", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
   }
 };
 

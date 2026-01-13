@@ -33,6 +33,7 @@ Route::apiResource('contacts', ContactController::class);
 Route::apiResource('categories', CategoryController::class);
 Route::apiResource('products', ProductController::class);
 Route::apiResource('product-images', ProductImageController::class);
+Route::post('product-sales/import', [ProductSaleController::class, 'import']);
 Route::apiResource('product-sales', ProductSaleController::class);
 Route::apiResource('attributes', AttributeController::class);
 Route::apiResource('product-attributes', ProductAttributeController::class);

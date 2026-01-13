@@ -195,6 +195,55 @@ if (!$request->has('include_expired')) {
 }
 
     /**
+     * POST /api/product-sales/import
+     * Import Excel -> Preview Data
+     */
+    public function import(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:csv,txt|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+            
+            $data = array_map('str_getcsv', file($path));
+            
+            // Remove header row if exists (check if first cell is 'product_id')
+            $header = $data[0] ?? [];
+            if (isset($header[0]) && strtolower(trim($header[0], "\xEF\xBB\xBF")) === 'product_id') {
+                array_shift($data);
+            }
+
+            $formattedData = [];
+            foreach ($data as $row) {
+                // Ensure row has enough columns
+                if (count($row) < 3) continue;
+                
+                $formattedData[] = [
+                    'product_id' => $row[0],
+                    'sale_type'  => $row[1],
+                    'sale_value' => $row[2],
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đọc file CSV thành công',
+                'data' => $formattedData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Lỗi đọc file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * DELETE /api/product-sales/{id}
      * Xóa ProductSale
      */
