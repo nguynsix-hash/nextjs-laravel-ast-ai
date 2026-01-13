@@ -73,197 +73,175 @@ export default function ProductDetail() {
       : null;
 
 
-  // --- GIAO DIỆN CHÍNH (Chi tiết sản phẩm) ---
   return (
-    <div className="p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="p-8 bg-gray-50 min-h-screen">
 
-      {/* Nút Quay Lại */}
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-2 px-4 py-2 mb-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
-      >
-        <ArrowLeft size={18} /> Quay lại danh sách
-      </button>
-
-      {/* Khung Chi tiết Sản phẩm */}
-      <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-
-        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-6 border-b pb-3 border-blue-100 dark:border-blue-900/50">
-          {product.name}
-        </h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* CỘT 1: HÌNH ẢNH */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-xl shadow-inner">
-
-              {/* Ảnh đại diện */}
-              {primaryImageUrl ? (
-                <img
-                  src={primaryImageUrl} // SỬ DỤNG primaryImageUrl ĐÃ XỬ LÝ
-                  alt={product.name}
-                  className="w-full h-80 object-cover rounded-xl shadow-lg mb-4 border-4 border-blue-500/20"
-                />
-              ) : (
-                <div className="w-full h-80 flex items-center justify-center bg-gray-200 dark:bg-gray-600 rounded-xl mb-4 text-gray-500">
-                  Không có ảnh đại diện
-                </div>
-              )}
-
-              {/* Danh sách ảnh phụ */}
-              <h3 className="font-semibold text-lg text-gray-700 dark:text-gray-300 mb-2">Ảnh Gallery:</h3>
-              <div className="flex flex-wrap gap-3">
-                {(product.images || []).map((img, idx) => (
-                  <img
-                    key={idx}
-                    // SỬ DỤNG getImageUrl CHO MỖI ẢNH PHỤ
-                    src={getImageUrl(img.url || img.image)}
-                    alt={`Ảnh phụ ${idx + 1}`}
-                    className="w-20 h-20 object-cover rounded-lg border border-gray-300 dark:border-gray-600 hover:border-blue-500 transition duration-150 cursor-pointer"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* CỘT 2: THÔNG TIN CHI TIẾT (Giữ nguyên) */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Box Thông tin cơ bản */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800">
-              <InfoBox icon={<Tag className="text-blue-600 dark:text-blue-400" size={20} />} title="Danh mục">
-                {product.category?.name ?? "Chưa phân loại"}
-              </InfoBox>
-              <InfoBox icon={<DollarSign className="text-green-600 dark:text-green-400" size={20} />} title="Giá bán">
-                <span className="text-xl font-bold text-green-700 dark:text-green-400">{formatCurrency(product.price_buy)}</span>
-              </InfoBox>
-              <InfoBox icon={<Package className="text-orange-600 dark:text-orange-400" size={20} />} title="Tồn kho">
-                <span className="text-xl font-bold text-orange-700 dark:text-orange-400">{product.store?.qty ?? 0}</span>
-              </InfoBox>
-            </div>
-
-            {/* Mô tả */}
-            <Section title="Mô tả ngắn">
-              <p className="text-gray-600 dark:text-gray-300 italic">{product.description ?? "Không có mô tả ngắn."}</p>
-            </Section>
-
-            {/* Nội dung chi tiết */}
-            <Section title="Nội dung chi tiết">
-              <div className="text-gray-600 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: product.content || "Chưa có nội dung chi tiết." }} />
-            </Section>
-
-            {/* Thuộc tính sản phẩm (ATTRIBUTES) */}
-                        {(product.attributes || []).length > 0 && (
-                            <Section title="Các Thuộc tính của Sản phẩm">
-                                <div className="flex flex-wrap gap-4">
-                                    {(product.attributes || []).map((attr, idx) => {
-                                        
-                                        // LOGIC CUỐI CÙNG: Dựa trên cấu trúc DB, tên thuộc tính phải nằm trong obj "attribute"
-                                        const attributeName = attr.attribute?.name || 'Chưa load tên (Thiếu eager loading)';
-                                        
-                                        // Dòng này giúp bạn debug chính xác đối tượng attribute bị thiếu
-                                        if (!attr.attribute) {
-                                            console.error(`LỖI BACKEND/EAGER LOAD: Đối tượng thuộc tính (attribute) có ID ${attr.attribute_id} bị thiếu trong JSON. Cần kiểm tra quan hệ.`);
-                                            console.log("Đối tượng Product Attribute Value:", attr);
-                                        }
-
-                                        return (
-                                            <div 
-                                                key={idx} 
-                                                className="AttributePill"
-                                            >
-                                                <span className="font-semibold text-blue-800 dark:text-blue-300">
-                                                    {attributeName}:
-                                                </span>
-                                                <span className="ml-2 font-medium text-gray-800 dark:text-gray-200">
-                                                    {attr.value}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </Section>
-                        )}
-
-            {/* Khuyến mãi (SALES) */}
-            {(product.sales || []).length > 0 && (
-              <Section title="Khuyến mãi đang áp dụng">
-                <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300 space-y-1">
-                  {product.sales.map((sale, idx) => (
-                    <li key={idx} className="font-medium text-purple-700 dark:text-purple-400">
-                      {sale.name} - Giảm: {sale.discount}%
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
-
-          </div>
-        </div>
-
-        {/* KHU VỰC HÀNH ĐỘNG */}
-        <div className="flex justify-end mt-8 gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+      {/* Header: Title & Navigation */}
+      <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <button
+          onClick={() => router.push("/dashboard/admin/product")}
+          className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition font-bold"
+        >
+          <ArrowLeft size={20} /> Quay lại danh sách
+        </button>
+        <div className="flex gap-3">
           <button
             onClick={() => router.push(`/dashboard/admin/product/${id}/edit`)}
-            className="Action-Button bg-yellow-500 hover:bg-yellow-600"
+            className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-5 py-2 rounded-lg font-bold shadow-sm transition"
           >
-            ✏️ Sửa sản phẩm
+            ✏️ Sửa
           </button>
-
           <button
-            onClick={() => alert(`Xác nhận xóa sản phẩm: ${product.name}?`)}
-            className="Action-Button bg-red-600 hover:bg-red-700"
+            onClick={() => {
+              if (window.confirm(`Xác nhận xóa sản phẩm: ${product.name}?`)) {
+                // Gọi API xóa ở đây hoặc chuyển hướng xử lý sau
+                alert("Chức năng xóa cần tích hợp API delete!");
+              }
+            }}
+            className="flex items-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 px-5 py-2 rounded-lg font-bold shadow-sm transition"
           >
-            🗑️ Xóa sản phẩm
+            🗑️ Xóa
           </button>
         </div>
       </div>
 
-      {/* TÁCH STYLE CHO CÁC PHẦN TỬ CHUYÊN BIỆT */}
+      {/* Main Content Card */}
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+
+        <div className="grid grid-cols-1 lg:grid-cols-3">
+
+          {/* LEFT COLUMN: IMAGES */}
+          <div className="lg:col-span-1 p-6 bg-gray-50 border-r border-gray-100">
+            {/* Main Image */}
+            <div className="aspect-square w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4 relative group">
+              {primaryImageUrl ? (
+                <img
+                  src={primaryImageUrl}
+                  alt={product.name}
+                  className="w-full h-full object-contain p-2"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <Package size={48} opacity={0.5} />
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail Gallery */}
+            {(product.images || []).length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Thư viện ảnh</h3>
+                <div className="grid grid-cols-4 gap-2">
+                  {product.images.map((img, idx) => (
+                    <div key={idx} className="aspect-square bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-500 transition">
+                      <img
+                        src={getImageUrl(img.url || img.image)}
+                        alt={`Gallery ${idx}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: INFO */}
+          <div className="lg:col-span-2 p-8">
+            <div>
+              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full mb-3 uppercase tracking-wide">
+                {product.category?.name || "Uncategorized"}
+              </span>
+              <h1 className="text-3xl font-extrabold text-gray-900 mb-2 leading-tight">
+                {product.name}
+              </h1>
+              {/* SLUG DISPLAY */}
+              <div className="flex items-center gap-2 text-gray-500 text-sm mb-6 bg-gray-100 px-3 py-1.5 rounded-lg w-fit">
+                <span className="font-semibold">Slug:</span>
+                <code className="text-blue-600">{product.slug || "---"}</code>
+              </div>
+
+              {/* Price & Stock Row */}
+              <div className="flex flex-wrap gap-6 mb-8 pb-8 border-b border-gray-100">
+                <div>
+                  <p className="text-gray-500 text-sm font-semibold mb-1">Giá bán</p>
+                  <div className="text-3xl font-extrabold text-green-600 flex items-baseline gap-1">
+                    {formatCurrency(product.price_buy)}
+                    {/* Hiển thị giá gốc/sale nếu có logic đó sau này */}
+                  </div>
+                </div>
+                <div className="hidden md:block w-px bg-gray-200"></div>
+                <div>
+                  <p className="text-gray-500 text-sm font-semibold mb-1">Tồn kho</p>
+                  <div className="text-3xl font-extrabold text-gray-800">
+                    {product.store?.qty ?? 0} <span className="text-base font-normal text-gray-400">sp</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attributes Section */}
+              {(product.attributes || []).length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    🧩 Thuộc tính
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {product.attributes.map((attr, idx) => {
+                      // Backend đã fix, lấy trực tiếp attribute.name
+                      const name = attr.attribute?.name || "Thuộc tính";
+                      return (
+                        <div key={idx} className="flex flex-col bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 min-w-[100px]">
+                          <span className="text-xs font-bold text-gray-500 uppercase">{name}</span>
+                          <span className="text-gray-900 font-bold">{attr.value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sales/Promotion Section */}
+              {(product.sales || []).length > 0 && (
+                <div className="mb-8 bg-purple-50 border border-purple-100 rounded-xl p-4">
+                  <h3 className="text-lg font-bold text-purple-900 mb-2 flex items-center gap-2">
+                    🎁 Khuyến mãi
+                  </h3>
+                  <ul className="space-y-1">
+                    {product.sales.map((sale, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-purple-700 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                        {sale.name} <span className="bg-purple-200 text-purple-800 text-xs px-2 py-0.5 rounded-full font-bold">-{sale.discount}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Descriptions */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Mô tả ngắn</h3>
+                  <p className="text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-100 italic">
+                    {product.description || "Chưa có mô tả ngắn."}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Chi tiết sản phẩm</h3>
+                  <div
+                    className="prose max-w-none text-gray-700 bg-white"
+                    dangerouslySetInnerHTML={{ __html: product.content || "<p class='text-gray-400'>Chưa có nội dung chi tiết.</p>" }}
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
       <style jsx>{`
-                .InfoBox-content {
-                    background-color: white;
-                    border: 1px solid #e5e7eb;
-                    border-radius: 0.75rem;
-                    padding: 1rem;
-                }
-                .dark .InfoBox-content {
-                    background-color: #1f2937;
-                    border-color: #374151;
-                }
-                
-                .AttributePill {
-                    padding: 0.5rem 1rem;
-                    border-radius: 9999px; /* rounded-full */
-                    background-color: #eff6ff; /* Blue 50 */
-                    border: 1px solid #bfdbfe; /* Blue 200 */
-                    font-size: 0.875rem;
-                    display: flex;
-                    align-items: center;
-                }
-                .dark .AttributePill {
-                    background-color: #1e3a8a; /* Blue 900 */
-                    border-color: #2563eb; /* Blue 600 */
-                }
-
-                .Section-Container {
-                    padding: 1rem;
-                    border-radius: 0.75rem;
-                    border: 1px solid #e5e7eb;
-                }
-                .dark .Section-Container {
-                    border-color: #374151;
-                }
-
-                .Action-Button {
-                    color: white;
-                    padding: 0.6rem 1.5rem;
-                    font-weight: 700;
-                    border-radius: 0.75rem;
-                    transition: background-color 0.2s, transform 0.1s;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-                }
+                /* Custom scrollbar if needed, or other specific styles */
             `}</style>
     </div>
   );

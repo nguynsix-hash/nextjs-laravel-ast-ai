@@ -33,10 +33,11 @@ export default function Header() {
   const userMenuRef = useRef(null);
 
   const navLinks = [
-    { name: "Giới thiệu", href: "/main/about" },
+    { name: "Giới thiệu", href: "/main/pages/about" },
     { name: "Sản phẩm", href: "/main/product" },
     { name: "Khuyến mãi", href: "/main/promotion" },
     { name: "Liên hệ", href: "/main/contact" },
+     { name: "Bài viết", href: "/main/post" },
   ];
 
   // ====== CẬP NHẬT SỐ LƯỢNG GIỎ HÀNG ======

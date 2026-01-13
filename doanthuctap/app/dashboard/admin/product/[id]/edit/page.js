@@ -7,6 +7,7 @@ import AttributeService from "@/services/AttributeService";
 
 const initialFormData = {
     name: '',
+    slug: '',
     status: 1,
     category_id: '',
     price_buy: 0,
@@ -19,6 +20,18 @@ const initialFormData = {
     options: [],
 };
 
+const generateSlug = (text) => {
+    return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim();
+};
+
 export default function AdminProductEdit() {
     const router = useRouter();
     const params = useParams();
@@ -29,6 +42,10 @@ export default function AdminProductEdit() {
     const [categories, setCategories] = useState([]);
     const [attributes, setAttributes] = useState([]);
     const [deletedImages, setDeletedImages] = useState([]);
+
+    // State cho dropdown chọn thuộc tính
+    const [selectedAttrToAdd, setSelectedAttrToAdd] = useState("");
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -48,11 +65,11 @@ export default function AdminProductEdit() {
             const [productRes, categoryRes, attributeRes] = await Promise.all([
                 ProductService.getById(productId),
                 CategoryService.getAll(),
-                AttributeService.getAll({ per_page: 999 })
+                AttributeService.getAll()
             ]);
 
             setCategories(categoryRes.data.data || []);
-            setAttributes(attributeRes.data.data || []);
+            setAttributes(attributeRes.data || []);
 
             const fetchedProduct = productRes.data.data || productRes.data;
 
@@ -80,9 +97,10 @@ export default function AdminProductEdit() {
             setForm({
                 ...initialFormData,
                 ...fetchedProduct,
+                slug: fetchedProduct.slug || '', // Load slug
                 category_id: fetchedProduct.category_id || '',
                 price_buy: Number(fetchedProduct.price_buy || 0),
-                stock: Number(fetchedProduct.store?.qty || 0), // Lấy từ store.qty
+                stock: Number(fetchedProduct.store?.qty || 0),
                 status: Number(fetchedProduct.status || 1),
                 content: fetchedProduct.content || '',
                 thumbnail_url,
@@ -103,7 +121,16 @@ export default function AdminProductEdit() {
     }, [fetchProductAndMasterData]);
 
     // --- Change handlers ---
-    const handleChange = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+    const handleChange = (field, value) => {
+        setForm(prev => {
+            const newData = { ...prev, [field]: value };
+            // Auto generate slug if name changes and slug is empty
+            if (field === 'name' && (!prev.slug || prev.slug === generateSlug(prev.name))) {
+                newData.slug = generateSlug(value);
+            }
+            return newData;
+        });
+    };
 
     const handleThumbnailChange = (e) => {
         const file = e.target.files[0];
@@ -117,17 +144,24 @@ export default function AdminProductEdit() {
 
     const handleRemoveThumbnail = () => setForm(prev => ({ ...prev, thumbnail: null, thumbnail_url: null }));
 
+    // Xử lý thêm thuộc tính từ Dropdown
     const handleAddOption = () => {
-        const newOptId = prompt("Nhập ID thuộc tính muốn thêm:");
-        if (!newOptId) return;
+        if (!selectedAttrToAdd) return alert("Vui lòng chọn thuộc tính để thêm!");
 
-        const attr = attributes.find(a => String(a.id) === String(newOptId));
-        if (!attr) return alert("❌ Không tìm thấy thuộc tính!");
+        const attrId = Number(selectedAttrToAdd);
+
+        // Kiểm tra xem đã có chưa
+        const exists = form.options.find(o => o.id === attrId);
+        if (exists) return alert("Thuộc tính này đã được thêm rồi!");
+
+        const attr = attributes.find(a => a.id === attrId);
+        if (!attr) return;
 
         setForm(prev => ({
             ...prev,
             options: [...prev.options, { id: attr.id, name: attr.name, values: [""] }]
         }));
+        setSelectedAttrToAdd(""); // Reset dropdown
     };
 
     const handleOptionValueChange = (optId, index, value) => {
@@ -183,13 +217,12 @@ export default function AdminProductEdit() {
             const data = new FormData();
 
             data.append("name", form.name);
+            data.append("slug", form.slug || generateSlug(form.name));
             data.append("status", form.status);
             data.append("category_id", form.category_id);
             data.append("price_buy", form.price_buy);
             data.append("description", form.description || "");
             data.append("content", form.content || "");
-
-            // Gửi stock (qty) lên backend
             data.append("qty", form.stock);
 
             // Thumbnail
@@ -204,12 +237,12 @@ export default function AdminProductEdit() {
                 }
             });
 
-            // Gửi danh sách ID ảnh cần xóa
+            // Deleted images
             deletedImages.forEach((id, i) => {
                 data.append(`deleted_images[${i}]`, id);
             });
 
-            // 🔥 FIX 2: attributes KHÔNG GHI ĐÈ
+            // Attributes
             let attrIndex = 0;
             form.options.forEach(opt => {
                 opt.values.forEach(val => {
@@ -221,7 +254,7 @@ export default function AdminProductEdit() {
                 });
             });
 
-            const res = await ProductService.update(productId, data);
+            await ProductService.update(productId, data);
 
             alert(`✅ Cập nhật sản phẩm "${form.name}" thành công!`);
             router.push("/dashboard/admin/product");
@@ -247,7 +280,7 @@ export default function AdminProductEdit() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Images */}
+                    {/* Images Column */}
                     <div className="space-y-4 lg:col-span-1">
                         <h2 className="text-3xl font-extrabold text-gray-800 border-b pb-2 mb-4">🖼️ Hình ảnh</h2>
                         {form.thumbnail_url ? (
@@ -277,11 +310,21 @@ export default function AdminProductEdit() {
                         </div>
                     </div>
 
-                    {/* Product info */}
+                    {/* Product Info Column */}
                     <div className="space-y-6 lg:col-span-2">
-                        <div>
-                            <label className="font-bold text-gray-800 block mb-1">Tên sản phẩm:</label>
-                            <input value={form.name} onChange={e => handleChange("name", e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg font-semibold text-gray-900" />
+                        {/* Name & Slug */}
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <label className="font-bold text-gray-800 block mb-1">Tên sản phẩm:</label>
+                                <input value={form.name} onChange={e => handleChange("name", e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg font-semibold text-gray-900" />
+                            </div>
+                            <div>
+                                <label className="font-bold text-gray-800 block mb-1">Slug (Đường dẫn):</label>
+                                <div className="flex gap-2">
+                                    <input value={form.slug} onChange={e => handleChange("slug", e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50" />
+                                    <button onClick={() => handleChange("slug", generateSlug(form.name))} className="px-4 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-bold">Auto</button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
@@ -299,6 +342,9 @@ export default function AdminProductEdit() {
                                     {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="font-bold text-gray-800 block mb-1">Giá (VNĐ):</label>
                                 <input type="number" value={form.price_buy} onChange={e => handleChange("price_buy", Number(e.target.value))} className="w-full p-3 border border-gray-300 rounded-lg" />
@@ -310,37 +356,67 @@ export default function AdminProductEdit() {
                         </div>
 
                         <div className="mt-4">
-                            <label className="font-bold text-gray-800 block mb-1">Mô tả:</label>
+                            <label className="font-bold text-gray-800 block mb-1">Mô tả ngắn:</label>
                             <textarea value={form.description} onChange={e => handleChange("description", e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg h-24" />
                         </div>
                         <div className="mt-2">
-                            <label className="font-bold text-gray-800 block mb-1">Nội dung:</label>
+                            <label className="font-bold text-gray-800 block mb-1">Nội dung chi tiết:</label>
                             <textarea value={form.content} onChange={e => handleChange("content", e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg h-32" />
                         </div>
 
-                        <div className="mt-4">
-                            <h3 className="text-xl font-bold mb-2">Thuộc tính</h3>
+                        {/* Attribute Section */}
+                        <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <h3 className="text-xl font-extrabold text-blue-900 mb-4">🧩 Thuộc tính sản phẩm</h3>
+
+                            {/* List existing options */}
                             {form.options.map((opt, i) => (
-                                <div key={opt.id} className="mb-2 border p-2 rounded flex flex-col gap-2">
-                                    <div className="flex justify-between items-center">
-                                        <strong>{opt.name}</strong>
-                                        <button onClick={() => handleRemoveOption(opt.id)} className="bg-red-500 text-white px-2 py-1 rounded">Xóa thuộc tính</button>
+                                <div key={opt.id} className="mb-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <strong className="text-lg text-gray-800">{opt.name}</strong>
+                                        <button onClick={() => handleRemoveOption(opt.id)} className="text-red-500 hover:text-red-700 text-sm font-bold">🗑️ Xóa</button>
                                     </div>
-                                    {opt.values.map((val, j) => (
-                                        <div key={j} className="flex gap-2 items-center">
-                                            <input value={val} onChange={e => handleOptionValueChange(opt.id, j, e.target.value)} className="border p-1 rounded w-full" />
-                                            <button onClick={() => handleRemoveOptionValue(opt.id, j)} className="bg-red-400 text-white px-2 py-1 rounded">X</button>
-                                        </div>
-                                    ))}
-                                    <button onClick={() => handleOptionValueChange(opt.id, opt.values.length, "")} className="bg-blue-500 text-white px-2 py-1 rounded mt-1">+ Thêm giá trị</button>
+                                    <div className="flex flex-wrap gap-2">
+                                        {opt.values.map((val, j) => (
+                                            <div key={j} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                                <input
+                                                    value={val}
+                                                    onChange={e => handleOptionValueChange(opt.id, j, e.target.value)}
+                                                    className="bg-transparent border-b border-gray-400 focus:border-blue-500 outline-none w-24 text-sm"
+                                                    placeholder="Giá trị..."
+                                                />
+                                                <button onClick={() => handleRemoveOptionValue(opt.id, j)} className="text-red-500 font-bold ml-1">×</button>
+                                            </div>
+                                        ))}
+                                        <button onClick={() => handleOptionValueChange(opt.id, opt.values.length, "")} className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded text-sm font-bold">+ Thêm giá trị</button>
+                                    </div>
                                 </div>
                             ))}
-                            <button onClick={handleAddOption} className="bg-green-600 text-white px-4 py-2 rounded mt-2">+ Thêm thuộc tính</button>
+
+                            {/* Add new option dropdown */}
+                            <div className="flex items-center gap-2 mt-4">
+                                <select
+                                    value={selectedAttrToAdd}
+                                    onChange={e => setSelectedAttrToAdd(e.target.value)}
+                                    className="p-2 border border-blue-300 rounded-lg flex-1"
+                                >
+                                    <option value="">-- Chọn thuộc tính để thêm --</option>
+                                    {attributes.filter(a => !form.options.find(o => o.id === a.id)).map(attr => (
+                                        <option key={attr.id} value={attr.id}>{attr.name}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={handleAddOption}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold shadow disabled:bg-gray-400"
+                                    disabled={!selectedAttrToAdd}
+                                >
+                                    + Thêm
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="mt-6 flex justify-center">
-                            <button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-md">
-                                {isSaving ? '💾 Đang lưu...' : '💾 Lưu sản phẩm'}
+                        <div className="mt-8 flex justify-center sticky bottom-4 bg-white p-4 shadow-xl rounded-2xl border border-gray-200 z-10">
+                            <button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-extrabold text-lg shadow-lg flex items-center gap-2 transform hover:scale-105 transition-all">
+                                {isSaving ? '💾 Đang lưu...' : '💾 LƯU SẢN PHẨM'}
                             </button>
                         </div>
                     </div>

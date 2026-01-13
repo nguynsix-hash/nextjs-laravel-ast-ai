@@ -519,8 +519,9 @@ class ProductController extends Controller
             $product->attributes()->delete();
 
             // 2. Thêm các thuộc tính mới
-            if (is_array($request->attributes)) {
-                foreach ($request->attributes as $attr) {
+            $attributes = $request->input('attributes');
+            if (is_array($attributes)) {
+                foreach ($attributes as $attr) {
                     if (isset($attr['attribute_id']) && isset($attr['value'])) {
                         $product->attributes()->create([
                             'attribute_id' => $attr['attribute_id'],

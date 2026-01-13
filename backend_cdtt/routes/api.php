@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\TopicController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\ConfigController;
+use App\Http\Controllers\Api\ChatController;
 
 
 
@@ -47,6 +48,10 @@ Route::apiResource('configs', ConfigController::class);
 Route::post('products/{product}/upload', [ProductController::class, 'uploadImages']);
 Route::delete('product-images/{id}', [ProductImageController::class, 'destroy']);
 Route::post('/product-attributes/multiple', [ProductAttributeController::class, 'storeMultiple']);
+
+// Chat AI (Gemini)
+Route::post('/chat', [ChatController::class, 'chat']);
+
 ///////////
 // --- NHÓM ROUTE CHO CLIENT (Người dùng cuối) ---
 Route::prefix('client')->group(function () {
