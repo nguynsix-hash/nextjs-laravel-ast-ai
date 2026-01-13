@@ -55,6 +55,9 @@ Route::prefix('client')->group(function () {
 
     // Chi tiết sản phẩm
     Route::get('/products/{id}', [ProductController::class, 'show']);
+    
+    // Sản phẩm liên quan
+    Route::get('/products/{id}/related', [ProductController::class, 'getRelated']);
 
     // Các route khác như danh mục, banner...
     Route::get('/categories', [CategoryController::class, 'index']);

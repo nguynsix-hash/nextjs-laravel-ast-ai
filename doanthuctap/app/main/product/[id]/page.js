@@ -25,7 +25,8 @@ export default function ProductDetailPage({ params }) {
   const [activeImage, setActiveImage] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
-  const [adding, setAdding] = useState(false); // Hiệu ứng loading khi bấm nút
+  const [adding, setAdding] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   // ================= FETCH PRODUCT =================
   useEffect(() => {
@@ -39,9 +40,9 @@ export default function ProductDetailPage({ params }) {
 
         if (productData) {
           setProduct(productData);
-          const initialImg = productData.thumbnail 
+          const initialImg = productData.thumbnail
             ? ProductService.getImageUrl(productData.thumbnail)
-            : productData.images?.[0] 
+            : productData.images?.[0]
               ? ProductService.getImageUrl(productData.images[0].image || productData.images[0].url)
               : "/placeholder-product.jpg";
           setActiveImage(initialImg);
@@ -50,6 +51,17 @@ export default function ProductDetailPage({ params }) {
           const sizeAttr = productData.attributes?.find(a => a.attribute?.code === "size");
           if (colorAttr) setSelectedColor(colorAttr.value);
           if (sizeAttr) setSelectedSize(sizeAttr.value);
+
+          // Fetch related products
+          try {
+            // Assuming category_id is available in productData.category_id or similar
+            const relatedRes = await ProductService.getRelated(productId);
+            if (relatedRes?.data) {
+              setRelatedProducts(relatedRes.data);
+            }
+          } catch (error) {
+            console.error("Related products error:", error);
+          }
         }
       } catch (err) {
         console.error("FETCH DETAIL ERROR:", err);
@@ -108,7 +120,7 @@ export default function ProductDetailPage({ params }) {
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-20 font-sans">
       <div className="max-w-7xl mx-auto p-4 md:p-8">
-        
+
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
           <button onClick={() => window.history.back()} className="hover:text-blue-600 transition flex items-center">
             <ArrowLeft className="w-4 h-4 mr-1" /> Sản phẩm
@@ -119,24 +131,23 @@ export default function ProductDetailPage({ params }) {
 
         <div className="bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
           <div className="grid lg:grid-cols-2 gap-12 p-6 md:p-12">
-            
+
             {/* CỘT TRÁI: GALLERY */}
             <div className="space-y-6">
               <div className="aspect-[4/5] md:aspect-square bg-[#f3f4f6] rounded-[24px] overflow-hidden border border-gray-50 group">
-                <img 
-                  src={activeImage} 
-                  alt={product.name} 
+                <img
+                  src={activeImage}
+                  alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
               </div>
 
               <div className="flex gap-4 overflow-x-auto py-2 no-scrollbar">
                 {product.thumbnail && (
-                  <button 
+                  <button
                     onClick={() => setActiveImage(ProductService.getImageUrl(product.thumbnail))}
-                    className={`relative min-w-[80px] h-[80px] rounded-2xl overflow-hidden border-2 transition-all ${
-                      activeImage === ProductService.getImageUrl(product.thumbnail) ? "border-blue-600 ring-4 ring-blue-50" : "border-transparent hover:border-gray-300"
-                    }`}
+                    className={`relative min-w-[80px] h-[80px] rounded-2xl overflow-hidden border-2 transition-all ${activeImage === ProductService.getImageUrl(product.thumbnail) ? "border-blue-600 ring-4 ring-blue-50" : "border-transparent hover:border-gray-300"
+                      }`}
                   >
                     <img src={ProductService.getImageUrl(product.thumbnail)} className="w-full h-full object-cover" alt="thumb" />
                   </button>
@@ -144,12 +155,11 @@ export default function ProductDetailPage({ params }) {
                 {product.images?.map((img, i) => {
                   const url = ProductService.getImageUrl(img.image || img.url);
                   return (
-                    <button 
-                      key={i} 
+                    <button
+                      key={i}
                       onClick={() => setActiveImage(url)}
-                      className={`relative min-w-[80px] h-[80px] rounded-2xl overflow-hidden border-2 transition-all ${
-                        activeImage === url ? "border-blue-600 ring-4 ring-blue-50" : "border-transparent hover:border-gray-300"
-                      }`}
+                      className={`relative min-w-[80px] h-[80px] rounded-2xl overflow-hidden border-2 transition-all ${activeImage === url ? "border-blue-600 ring-4 ring-blue-50" : "border-transparent hover:border-gray-300"
+                        }`}
                     >
                       <img src={url} className="w-full h-full object-cover" alt="gallery" />
                     </button>
@@ -200,9 +210,8 @@ export default function ProductDetailPage({ params }) {
                       <button
                         key={c.id}
                         onClick={() => setSelectedColor(c.value)}
-                        className={`min-w-[60px] h-12 px-4 rounded-xl border-2 font-bold transition-all ${
-                          selectedColor === c.value ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-100" : "border-gray-100 bg-white text-gray-600 hover:border-gray-300"
-                        }`}
+                        className={`min-w-[60px] h-12 px-4 rounded-xl border-2 font-bold transition-all ${selectedColor === c.value ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-100" : "border-gray-100 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
                       >
                         {c.value}
                       </button>
@@ -223,9 +232,8 @@ export default function ProductDetailPage({ params }) {
                       <button
                         key={s.id}
                         onClick={() => setSelectedSize(s.value)}
-                        className={`w-14 h-12 rounded-xl border-2 font-bold transition-all ${
-                          selectedSize === s.value ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-100" : "border-gray-100 bg-white text-gray-600 hover:border-gray-300"
-                        }`}
+                        className={`w-14 h-12 rounded-xl border-2 font-bold transition-all ${selectedSize === s.value ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-100" : "border-gray-100 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
                       >
                         {s.value}
                       </button>
@@ -236,12 +244,12 @@ export default function ProductDetailPage({ params }) {
 
               {/* NÚT THAO TÁC */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-auto">
-                <button 
+                <button
                   onClick={handleAddToCart}
                   disabled={adding}
                   className="md:col-span-4 bg-gray-900 hover:bg-black text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-gray-200 disabled:opacity-70"
                 >
-                  {adding ? <Loader2 className="animate-spin" /> : <ShoppingCart size={24} />} 
+                  {adding ? <Loader2 className="animate-spin" /> : <ShoppingCart size={24} />}
                   {adding ? "ĐANG THÊM..." : "THÊM VÀO GIỎ HÀNG"}
                 </button>
                 <button className="md:col-span-1 bg-white border-2 border-gray-100 hover:border-red-100 hover:bg-red-50 text-gray-900 hover:text-red-600 py-5 rounded-2xl flex items-center justify-center transition-all">
@@ -253,15 +261,15 @@ export default function ProductDetailPage({ params }) {
               <div className="mt-10 p-6 bg-gray-50 rounded-[24px] grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-blue-600"><Truck size={20} /></div>
-                  <span className="text-[11px] font-black text-gray-500 leading-tight uppercase">Miễn phí<br/>vận chuyển</span>
+                  <span className="text-[11px] font-black text-gray-500 leading-tight uppercase">Miễn phí<br />vận chuyển</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-orange-500"><Zap size={20} /></div>
-                  <span className="text-[11px] font-black text-gray-500 leading-tight uppercase">Giao hàng<br/>hỏa tốc</span>
+                  <span className="text-[11px] font-black text-gray-500 leading-tight uppercase">Giao hàng<br />hỏa tốc</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-green-500"><CheckCircle size={20} /></div>
-                  <span className="text-[11px] font-black text-gray-500 leading-tight uppercase">Đổi trả<br/>trong 7 ngày</span>
+                  <span className="text-[11px] font-black text-gray-500 leading-tight uppercase">Đổi trả<br />trong 7 ngày</span>
                 </div>
               </div>
             </div>
@@ -293,15 +301,60 @@ export default function ProductDetailPage({ params }) {
           <div className="lg:col-span-8">
             <div className="bg-white p-8 md:p-12 rounded-[24px] shadow-sm border border-gray-100">
               <h3 className="text-2xl font-black text-gray-900 mb-8">CÂU CHUYỆN SẢN PHẨM</h3>
-              <div 
+              <div
                 className="prose prose-lg prose-blue max-w-none text-gray-600 leading-relaxed font-medium"
                 dangerouslySetInnerHTML={{ __html: product.content || product.description }}
               />
             </div>
           </div>
         </div>
+
+        {/* SẢN PHẨM LIÊN QUAN */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16">
+            <h3 className="text-2xl font-black text-gray-900 mb-8 flex items-center gap-3">
+              <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
+              CÓ THỂ BẠN SẼ THÍCH
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((p) => (
+                <a
+                  key={p.id}
+                  href={`/main/product/${p.id}`}
+                  className="group block bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all duration-300"
+                >
+                  <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-4 relative">
+                    <img
+                      src={p.thumbnail ? ProductService.getImageUrl(p.thumbnail) : "/placeholder-product.jpg"}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    {p.price_sale && (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">
+                        SALE
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-gray-900 mb-2 truncate group-hover:text-blue-600 transition-colors">
+                    {p.name}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-600 font-black">
+                      {Number(p.price_sale || p.price_buy).toLocaleString("vi-VN")}₫
+                    </span>
+                    {p.price_sale && (
+                      <span className="text-xs text-gray-400 line-through font-medium">
+                        {Number(p.price_buy).toLocaleString("vi-VN")}₫
+                      </span>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      
+
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

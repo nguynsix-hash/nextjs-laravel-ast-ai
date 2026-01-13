@@ -338,10 +338,79 @@ class ProductController extends Controller
             'store'
         ]);
 
+        // XỬ LÝ LẤY GIÁ SALE (NẾU CÓ)
+        $sale = $product->sales()
+            ->where('date_begin', '<=', now())
+            ->where('date_end', '>=', now())
+            ->first();
+
+        if ($sale) {
+            $product->price_sale = $sale->price_sale;
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Lấy chi tiết sản phẩm thành công.',
             'data' => $product
+        ]);
+    }
+
+    /**
+     * ============================
+     *  LẤY SẢN PHẨM LIÊN QUAN
+     * ============================
+     */
+    public function getRelated(Request $request, $id)
+    {
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sản phẩm không tồn tại.'
+            ], 404);
+        }
+
+        $limit = $request->input('limit', 4);
+        $now = now();
+
+        $relatedProducts = Product::where('category_id', $product->category_id)
+            ->where('id', '!=', $id)
+            ->where('status', 1)
+            // Filter: Có tồn kho (Tổng QTY > 0)
+            // Filter: Có tồn kho (qty > 0)
+            ->whereHas('store', function ($q) {
+                $q->where('qty', '>', 0);
+            })
+            // Filter: BỎ lọc khuyến mãi (lấy cả sp không sale)
+            ->with(['images', 'sales' => function ($q) use ($now) {
+                $q->where('date_begin', '<=', $now)
+                  ->where('date_end', '>=', $now);
+            }])
+            ->limit($limit)
+            ->inRandomOrder() 
+            ->get();
+
+        // Xử lý thêm url ảnh nếu cần thiết (tương tự method index)
+        foreach ($relatedProducts as $p) {
+             if ($p->thumbnail) {
+                 $p->thumbnail_url = asset('storage/' . $p->thumbnail);
+             }
+             foreach ($p->images as $img) {
+                 $img->image_url = asset('storage/' . $img->image);
+             }
+             
+             // Attach price_sale
+             $activeSale = $p->sales->first(); // Đã filter theo date ở query key 'sales' trên
+             if ($activeSale) {
+                 $p->price_sale = $activeSale->price_sale;
+             }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lấy danh sách sản phẩm liên quan thành công.',
+            'data' => $relatedProducts
         ]);
     }
 

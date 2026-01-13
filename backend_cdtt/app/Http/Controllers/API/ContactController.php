@@ -83,14 +83,16 @@ class ContactController extends Controller
      */
     public function store(Request $request)
     {
+        // Update Validation: Email should be required if DB requires it. Phone can be optional but must be handling string/null mismatch.
+        // Tuy nhiên, để linh hoạt, ta sẽ giữ nullable và xử lý gán chuỗi rỗng bên dưới nếu null.
         $validator = Validator::make($request->all(), [
             'user_id' => 'nullable|integer',
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => 'required|email|max:255', // Changed to required
             'phone' => 'nullable|string|max:50',
             'content' => 'required|string',
             'reply_id' => 'nullable|integer',
-            'status' => 'required|integer|in:0,1'
+            'status' => 'nullable|integer|in:0,1'
         ]);
 
         if ($validator->fails()) {
@@ -101,13 +103,33 @@ class ContactController extends Controller
             ], 422);
         }
 
-        $contact = Contact::create($request->all());
+        try {
+            $data = $request->all();
+            $data['created_at'] = now();
+            $data['updated_at'] = now();
+            $data['user_id'] = $request->user_id ?? null; 
+            // Fix 500 Error: created_by is NOT NULL check migration
+            $data['created_by'] = $request->created_by ?? 1; // Default to 1 (Admin) instead of null
+            $data['status'] = $request->status ?? 1;
+            
+            // Fix 500 Error: DB fields are NOT NULL
+            $data['phone'] = $request->phone ?? ""; 
+            $data['email'] = $request->email ?? ""; // Should be covered by required validation but safe to keep
+            $data['reply_id'] = $request->reply_id ?? 0;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Tạo liên hệ thành công',
-            'data' => $contact
-        ], 201);
+            $contact = Contact::create($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tạo liên hệ thành công',
+                'data' => $contact
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi Server: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -21,6 +21,11 @@ const ProductService = {
     getById: (id) => api.get(`/products/${id}`),
 
     /**
+     * Lấy sản phẩm liên quan
+     */
+    getRelated: (id, limit = 4) => api.get(`/client/products/${id}/related`, { params: { limit } }),
+
+    /**
      * Tạo mới sản phẩm (Dùng FormData vì có upload file)
      */
     create: (formData) => {
@@ -34,7 +39,7 @@ const ProductService = {
      * Lưu ý: Laravel đôi khi không nhận PUT với multipart/form-data. 
      * Nếu lỗi, hãy đổi api.put thành api.post và thêm formData.append('_method', 'PUT')
      */
-     update: (id, formData) => {
+    update: (id, formData) => {
         formData.append("_method", "PUT");
         return api.post(`/products/${id}`, formData, {
             headers: { "Content-Type": "multipart/form-data" }
