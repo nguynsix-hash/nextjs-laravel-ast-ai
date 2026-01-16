@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, Search, Edit, Loader2 } from "lucide-react";
+import { Plus, Trash2, Search, Edit, Loader2, History } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ProductStoreService from "@/services/ProductStoreService";
 
@@ -143,6 +143,13 @@ export default function WarehouseImport() {
                         <option value="1">Chờ xử lý</option>
                     </select>
                 </div>
+
+                <button
+                    onClick={() => router.push("/dashboard/admin/inventory/history")}
+                    className="flex items-center gap-2 bg-white text-gray-700 font-semibold px-4 py-2 rounded-lg shadow-sm border border-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                    <History size={18} /> LỊCH SỬ NHẬP
+                </button>
 
                 {/* Add Button */}
                 <button

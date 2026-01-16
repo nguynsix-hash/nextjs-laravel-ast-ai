@@ -142,6 +142,20 @@ class ProductStoreController extends Controller
         ]);
     }
 
+    // 🔥 GHI LOG LỊCH SỬ NHẬP KHO
+    try {
+        \App\Models\InventoryLog::create([
+            'product_id' => $request->product_id,
+            'qty'        => $request->qty,
+            'price_root' => $request->price_root,
+            'created_by' => auth()->id() ?? 1,
+            'created_at' => now(),
+        ]);
+    } catch (\Exception $e) {
+        // Log error but don't fail the request
+        \Illuminate\Support\Facades\Log::error("Failed to create inventory log: " . $e->getMessage());
+    }
+
     $store->load(['product', 'product.images', 'product.category']);
 
     return response()->json([

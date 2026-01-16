@@ -14,7 +14,8 @@ import {
 import { useSearchParams, useRouter } from "next/navigation";
 import ProductService from "../../../services/ProductService";
 import CategoryService from "../../../services/CategoryService";
-import CartService from "../../../services/CartService"; // Import CartService của bạn
+import CartService from "../../../services/CartService";
+import AttributeService from "../../../services/AttributeService";
 
 /* ================= PRODUCT CARD ================= */
 const ProductCard = ({ product, viewMode }) => {
@@ -37,10 +38,10 @@ const ProductCard = ({ product, viewMode }) => {
     /* Xử lý thêm vào giỏ hàng */
     const handleAddToCart = (e) => {
         e.stopPropagation(); // Ngăn sự kiện click lan ra ngoài làm chuyển trang
-        
+
         // Gọi service của bạn (mặc định color/size là null cho add nhanh)
         CartService.addToCart(product, 1, null, null);
-        
+
         // Hiệu ứng phản hồi người dùng
         setIsAdded(true);
         setTimeout(() => setIsAdded(false), 2000);
@@ -48,18 +49,16 @@ const ProductCard = ({ product, viewMode }) => {
 
     return (
         <div
-            className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group ${
-                isGrid
-                    ? "flex flex-col p-4"
-                    : "flex flex-col sm:flex-row items-center p-4 gap-4"
-            }`}
+            className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group ${isGrid
+                ? "flex flex-col p-4"
+                : "flex flex-col sm:flex-row items-center p-4 gap-4"
+                }`}
         >
             {/* IMAGE */}
             <div
                 onClick={goToDetail}
-                className={`relative cursor-pointer overflow-hidden rounded-lg ${
-                    isGrid ? "w-full h-48 mb-4" : "w-32 h-32 flex-shrink-0"
-                }`}
+                className={`relative cursor-pointer overflow-hidden rounded-lg ${isGrid ? "w-full h-48 mb-4" : "w-32 h-32 flex-shrink-0"
+                    }`}
             >
                 <img
                     src={ProductService.getProductThumbnailUrl(product)}
@@ -84,9 +83,8 @@ const ProductCard = ({ product, viewMode }) => {
 
                 <h3
                     onClick={goToDetail}
-                    className={`mt-1 font-bold cursor-pointer hover:text-blue-600 transition-colors line-clamp-2 ${
-                        isGrid ? "text-sm h-10" : "text-lg"
-                    }`}
+                    className={`mt-1 font-bold cursor-pointer hover:text-blue-600 transition-colors line-clamp-2 ${isGrid ? "text-sm h-10" : "text-lg"
+                        }`}
                 >
                     {product.name}
                 </h3>
@@ -116,14 +114,13 @@ const ProductCard = ({ product, viewMode }) => {
                     Chi tiết
                 </button>
 
-                <button 
+                <button
                     onClick={handleAddToCart}
                     disabled={isAdded}
-                    className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center shadow-lg active:scale-90 ${
-                        isAdded 
-                        ? "bg-green-500 text-white shadow-green-100" 
+                    className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center shadow-lg active:scale-90 ${isAdded
+                        ? "bg-green-500 text-white shadow-green-100"
                         : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100"
-                    }`}
+                        }`}
                 >
                     {isAdded ? <CheckCircle2 className="h-5 w-5 animate-in zoom-in" /> : <ShoppingCart className="h-5 w-5" />}
                 </button>
@@ -139,12 +136,16 @@ export default function ProductPage() {
 
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [attributesList, setAttributesList] = useState([]); // List bộ lọc động (Màu, Size,...)
     const [loading, setLoading] = useState(true);
 
     const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+
+    // State bộ lọc tổng hợp
     const [filters, setFilters] = useState({
         category_id: searchParams.get("category_id") || "",
-        priceRange: ""
+        priceRange: "",
+        attributes: {} // Object: { 1: "Đỏ", 2: "XL" }
     });
 
     const [sortOption, setSortOption] = useState("newest");
@@ -156,14 +157,58 @@ export default function ProductPage() {
         total: 0
     });
 
-    /* ===== LOAD CATEGORY ===== */
+    /* ===== LOAD INITIAL DATA (Category + Attributes) ===== */
     useEffect(() => {
+        // Load Categories
         CategoryService.getAll()
+            .then((res) => setCategories(res.data?.data || res.data || []))
+            .catch(console.error);
+
+        // Load Attributes for Filter
+        AttributeService.getClientFilterList()
             .then((res) => {
-                setCategories(res.data?.data || res.data || []);
+                if (res.success) setAttributesList(res.data);
             })
             .catch(console.error);
     }, []);
+
+    // Update state when URL params change
+    useEffect(() => {
+        const querySearch = searchParams.get("search") || "";
+        const queryCategory = searchParams.get("category_id") || "";
+
+        // Parse attributes from URL URL (e.g. attributes[1]=Red)
+        const queryAttributes = {};
+        searchParams.forEach((value, key) => {
+            const match = key.match(/attributes\[(\d+)\]/);
+            if (match) {
+                queryAttributes[match[1]] = value;
+            }
+        });
+
+        if (querySearch !== searchTerm) setSearchTerm(querySearch);
+
+        // Sync Filters
+        setFilters(prev => {
+            const newFilters = { ...prev };
+            let changed = false;
+
+            if (queryCategory !== prev.category_id) {
+                newFilters.category_id = queryCategory;
+                changed = true;
+            }
+
+            // Shallow compare attributes
+            const isAttrSame = JSON.stringify(prev.attributes) === JSON.stringify(queryAttributes);
+            if (!isAttrSame) {
+                newFilters.attributes = queryAttributes;
+                changed = true;
+            }
+
+            return changed ? newFilters : prev;
+        });
+
+    }, [searchParams]);
 
     /* ===== LOAD PRODUCT ===== */
     const fetchProducts = useCallback(
@@ -179,12 +224,19 @@ export default function ProductPage() {
                 if (searchTerm) params.search = searchTerm;
                 if (filters.category_id) params.category_id = filters.category_id;
 
+                // Handle Price Range
                 if (filters.priceRange === "<500k") params.price_max = 500000;
                 if (filters.priceRange === "500k-2tr") {
                     params.price_min = 500000;
                     params.price_max = 2000000;
                 }
                 if (filters.priceRange === ">2tr") params.price_min = 2000000;
+
+                // Handle Dynamic Attributes
+                if (filters.attributes) {
+                    // Axios will serialize attributes: { 1: "Red" } -> attributes[1]=Red
+                    params.attributes = filters.attributes;
+                }
 
                 const res = await ProductService.productClient(params);
 
@@ -215,6 +267,22 @@ export default function ProductPage() {
         setFilters((prev) => ({ ...prev, [key]: value }));
     };
 
+    // Handle clicking a dynamic attribute filter
+    const handleAttributeFilterChange = (attrId, value) => {
+        const currentVal = filters.attributes[attrId];
+        const newVal = currentVal === value ? "" : value; // Toggle
+
+        // Update URL
+        const newParams = new URLSearchParams(searchParams);
+        if (newVal) {
+            newParams.set(`attributes[${attrId}]`, newVal);
+        } else {
+            newParams.delete(`attributes[${attrId}]`);
+        }
+        newParams.set('page', '1');
+        router.push(`/main/product?${newParams.toString()}`);
+    };
+
     return (
         <div className="bg-gray-50 min-h-screen pb-10">
             <div className="max-w-7xl mx-auto py-8 px-4">
@@ -232,8 +300,21 @@ export default function ProductPage() {
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-5" />
                         <input
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchTerm} // Controlled by URL state now
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSearchTerm(val);
+                                // Optional: debounce url update here if desired
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const newParams = new URLSearchParams(searchParams);
+                                    if (searchTerm) newParams.set('search', searchTerm);
+                                    else newParams.delete('search');
+                                    newParams.set('page', 1);
+                                    router.push(`/main/product?${newParams.toString()}`);
+                                }
+                            }}
                             placeholder="Bạn đang tìm sản phẩm gì?..."
                             className="w-full pl-11 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all"
                         />
@@ -253,17 +334,15 @@ export default function ProductPage() {
                         <div className="flex bg-gray-50 rounded-xl p-1 border">
                             <button
                                 onClick={() => setViewMode("grid")}
-                                className={`p-2 rounded-lg transition-all ${
-                                    viewMode === "grid" ? "bg-white shadow-sm text-blue-600" : "text-gray-400"
-                                }`}
+                                className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white shadow-sm text-blue-600" : "text-gray-400"
+                                    }`}
                             >
                                 <LayoutGrid size={20} />
                             </button>
                             <button
                                 onClick={() => setViewMode("list")}
-                                className={`p-2 rounded-lg transition-all ${
-                                    viewMode === "list" ? "bg-white shadow-sm text-blue-600" : "text-gray-400"
-                                }`}
+                                className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-white shadow-sm text-blue-600" : "text-gray-400"
+                                    }`}
                             >
                                 <List size={20} />
                             </button>
@@ -288,9 +367,8 @@ export default function ProductPage() {
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                                     <button
                                         onClick={() => handleFilterChange("category_id", "")}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                            filters.category_id === "" ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-gray-50 text-gray-600"
-                                        }`}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${filters.category_id === "" ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-gray-50 text-gray-600"
+                                            }`}
                                     >
                                         Tất cả danh mục
                                     </button>
@@ -298,9 +376,8 @@ export default function ProductPage() {
                                         <button
                                             key={cat.id}
                                             onClick={() => handleFilterChange("category_id", cat.id)}
-                                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                                String(filters.category_id) === String(cat.id) ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-gray-50 text-gray-600"
-                                            }`}
+                                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${String(filters.category_id) === String(cat.id) ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-gray-50 text-gray-600"
+                                                }`}
                                         >
                                             {cat.name}
                                         </button>
@@ -336,10 +413,34 @@ export default function ProductPage() {
                                 </div>
                             </div>
 
+                            {/* Dynamic Attributes Filter */}
+                            {attributesList.map(attr => (
+                                <div key={attr.id} className="mb-8">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                                        {attr.name}
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {attr.values.map(val => (
+                                            <button
+                                                key={val}
+                                                onClick={() => handleAttributeFilterChange(attr.id, val)}
+                                                className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${String(filters.attributes?.[attr.id]) === String(val)
+                                                    ? "bg-blue-600 text-white border-blue-600 font-bold shadow-md"
+                                                    : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+                                                    }`}
+                                            >
+                                                {val}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+
                             <button
                                 onClick={() => {
-                                    setFilters({ category_id: "", priceRange: "" });
+                                    setFilters({ category_id: "", priceRange: "", attributes: {} });
                                     setSearchTerm("");
+                                    router.push("/main/product");
                                 }}
                                 className="w-full py-2.5 text-xs font-bold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all uppercase tracking-widest"
                             >
@@ -382,7 +483,7 @@ export default function ProductPage() {
                                 )}
                             </div>
                         )}
-                        
+
                         {/* Pagination (Optional - should be implemented based on your UI) */}
                         {!loading && pagination.last_page > 1 && (
                             <div className="mt-12 flex justify-center gap-2">
@@ -390,11 +491,10 @@ export default function ProductPage() {
                                     <button
                                         key={i + 1}
                                         onClick={() => fetchProducts(i + 1)}
-                                        className={`size-10 rounded-lg font-bold text-sm transition-all ${
-                                            pagination.current_page === i + 1
-                                                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                                                : "bg-white text-gray-600 hover:bg-gray-100"
-                                        }`}
+                                        className={`size-10 rounded-lg font-bold text-sm transition-all ${pagination.current_page === i + 1
+                                            ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                                            : "bg-white text-gray-600 hover:bg-gray-100"
+                                            }`}
                                     >
                                         {i + 1}
                                     </button>

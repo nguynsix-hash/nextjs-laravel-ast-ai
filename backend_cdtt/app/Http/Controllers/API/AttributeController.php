@@ -11,6 +11,43 @@ use Illuminate\Support\Facades\Validator;
 class AttributeController extends Controller
 {
     /**
+     * GET /api/client/attributes-filter
+     * Lấy danh sách Attribute và các Value ĐANG CÓ trong sản phẩm (để làm bộ lọc)
+     */
+    public function clientList()
+    {
+        // Lấy tất cả thuộc tính
+        $attributes = Attribute::all();
+        $data = [];
+
+        foreach ($attributes as $attr) {
+            // Lấy các giá trị (value) duy nhất của thuộc tính này từ các sản phẩm ĐANG HOẠT ĐỘNG (status=1)
+            $values = \App\Models\ProductAttribute::where('attribute_id', $attr->id)
+                ->whereHas('product', function ($q) {
+                    $q->where('status', 1); // Chỉ lấy sản phẩm active
+                })
+                ->select('value')
+                ->distinct()
+                ->pluck('value');
+
+            // Nếu thuộc tính này có giá trị nào đó được sử dụng thì mới trả về
+            if ($values->count() > 0) {
+                $data[] = [
+                    'id' => $attr->id,
+                    'name' => $attr->name,
+                    'values' => $values
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lấy danh sách bộ lọc thành công',
+            'data' => $data
+        ]);
+    }
+
+    /**
      * GET /api/attributes
      * Lấy danh sách Attribute kèm sản phẩm
      * Có filter sản phẩm, search theo name, sort, paginate

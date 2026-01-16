@@ -24,7 +24,8 @@ export default function WarehouseImportAdd() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await ProductService.getAll();
+                // Pass limit=1000 to get all products for dropdown
+                const res = await ProductService.getAll({ limit: 1000 });
                 console.log("📌 API /products trả về:", res.data);
 
                 let list = [];

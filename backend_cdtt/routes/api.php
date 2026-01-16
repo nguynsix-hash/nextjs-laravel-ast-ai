@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\ConfigController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\InventoryLogController;
 
 
 
@@ -35,6 +36,9 @@ Route::apiResource('products', ProductController::class);
 Route::apiResource('product-images', ProductImageController::class);
 Route::post('product-sales/import', [ProductSaleController::class, 'import']);
 Route::apiResource('product-sales', ProductSaleController::class);
+
+// INVENTORY LOGS
+Route::get('inventory-logs', [InventoryLogController::class, 'index']);
 Route::apiResource('attributes', AttributeController::class);
 Route::apiResource('product-attributes', ProductAttributeController::class);
 Route::apiResource('product-stores', ProductStoreController::class);
@@ -67,6 +71,9 @@ Route::prefix('client')->group(function () {
 
     // Các route khác như danh mục, banner...
     Route::get('/categories', [CategoryController::class, 'index']);
+    
+    // Bộ lọc thuộc tính (Mới)
+    Route::get('/attributes-filter', [AttributeController::class, 'clientList']);
 });
 ///////////////jwt
 // 1. Nhóm Auth (Giữ nguyên)

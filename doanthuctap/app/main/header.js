@@ -17,6 +17,7 @@ import { logout } from "@/services/AuthService";
 import CategoryService from "@/services/CategoryService";
 import CartService from "@/services/CartService";
 import ConfigService from "@/services/ConfigService";
+import MenuService from "@/services/MenuService";
 
 export default function Header() {
   const router = useRouter();
@@ -25,20 +26,13 @@ export default function Header() {
   const [categories, setCategories] = useState([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [menus, setMenus] = useState([]);
 
   // Config state for dynamic site name and hotline
   // Use empty string initially to match server render, then load from cache/API in useEffect
   const [config, setConfig] = useState({ site_name: '', hotline: '' });
 
   const userMenuRef = useRef(null);
-
-  const navLinks = [
-    { name: "Giới thiệu", href: "/main/pages/about" },
-    { name: "Sản phẩm", href: "/main/product" },
-    { name: "Khuyến mãi", href: "/main/promotion" },
-    { name: "Liên hệ", href: "/main/contact" },
-     { name: "Bài viết", href: "/main/post" },
-  ];
 
   // ====== CẬP NHẬT SỐ LƯỢNG GIỎ HÀNG ======
   const updateCartBadge = () => {
@@ -74,6 +68,44 @@ export default function Header() {
     };
     fetchCategories();
 
+    // Load Main Menu
+    const fetchMenus = async () => {
+      try {
+        const res = await MenuService.getAll({
+          position: 'mainmenu',
+          status: 1,
+          sort_by: 'sort_order',
+          order: 'asc',
+          parent_id: 0 // Optional: only get top level
+        });
+        const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+
+        if (data.length > 0) {
+          setMenus(data);
+        } else {
+          // Fallback nến không có menu nào
+          setMenus([
+            { name: "Giới thiệu", link: "/main/pages/about" },
+            { name: "Sản phẩm", link: "/main/product" },
+            { name: "Khuyến mãi", link: "/main/promotion" },
+            { name: "Liên hệ", link: "/main/contact" },
+            { name: "Bài viết", link: "/main/post" },
+          ]);
+        }
+      } catch (error) {
+        console.error("Fetch menu error:", error);
+        // Fallback error
+        setMenus([
+          { name: "Giới thiệu", link: "/main/pages/about" },
+          { name: "Sản phẩm", link: "/main/product" },
+          { name: "Khuyến mãi", link: "/main/promotion" },
+          { name: "Liên hệ", link: "/main/contact" },
+          { name: "Bài viết", link: "/main/post" },
+        ]);
+      }
+    };
+    fetchMenus();
+
     // Load config from API and update cache
     const fetchConfig = async () => {
       try {
@@ -94,7 +126,6 @@ export default function Header() {
     };
     fetchConfig();
 
-    // Load cart lần đầu
     // Load cart lần đầu
     updateCartBadge();
 
@@ -309,15 +340,15 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Main Links */}
+          {/* Main Links - DYNAMIC */}
           <div className="flex space-x-1 ml-4">
-            {navLinks.map((l) => (
+            {menus.map((item, index) => (
               <a
-                key={l.name}
-                href={l.href}
+                key={index}
+                href={item.link}
                 className="text-white px-5 py-3 text-sm font-bold uppercase tracking-wide hover:bg-indigo-500 transition-colors rounded-t-sm"
               >
-                {l.name}
+                {item.name}
               </a>
             ))}
           </div>

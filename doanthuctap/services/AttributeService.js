@@ -1,6 +1,6 @@
 // /services/AttributeService.js
 
-import httpAxios from "./httpAxios"; 
+import httpAxios from "./httpAxios";
 
 const AttributeService = {
     /**
@@ -10,11 +10,25 @@ const AttributeService = {
      * @param {Object} params - Các tham số truy vấn (ví dụ: filter, search)
      * @returns {Promise<Object>} Dữ liệu trả về từ API
      */
-    getAll: async (params = {}) => { 
+    getAll: async (params = {}) => {
         try {
             const response = await httpAxios.get('attributes', { params });
             // API Laravel trả về { status: true, message: '...', data: ... }
-            return response.data; 
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
+     * Lấy danh sách bộ lọc cho Client (chỉ lấy attribute có sản phẩm)
+     * GET /api/client/attributes-filter
+     * @returns {Promise<Object>} Dữ liệu trả về từ API
+     */
+    getClientFilterList: async () => {
+        try {
+            const response = await httpAxios.get("client/attributes-filter");
+            return response; // Trả về nguyên body { success: true, data: [...] }
         } catch (error) {
             throw error;
         }
@@ -52,7 +66,7 @@ const AttributeService = {
      */
     update: async (id, data) => {
         try {
-            const response = await httpAxios.put(`attributes/${id}`, data); 
+            const response = await httpAxios.put(`attributes/${id}`, data);
             return response.data;
         } catch (error) {
             throw error;

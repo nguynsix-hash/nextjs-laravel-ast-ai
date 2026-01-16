@@ -182,17 +182,35 @@ class ProductController extends Controller
             $query->where('price_buy', '<=', $request->price_max);
         }
 
-        // Lọc theo Thuộc tính (Màu sắc/Size)
-        if ($request->filled('color')) {
-            $query->whereHas('attributes', function ($q) use ($request) {
-                $q->where('attribute_id', 1)->where('value', $request->color);
-            });
+        // Lọc theo Thuộc tính ĐỘNG (Dynamic Attributes)
+    // Format: ?attributes[1]=Red&attributes[2]=XL
+    \Illuminate\Support\Facades\Log::info('Incoming Attributes Filter: ', ['attrs' => $request->input('attributes')]);
+    
+    if ($request->filled('attributes') && is_array($request->input('attributes'))) {
+        foreach ($request->input('attributes') as $attrId => $value) {
+            if (!empty($value)) {
+                \Illuminate\Support\Facades\Log::info("Filtering by Attribute ID: {$attrId}, Value: {$value}");
+                $query->whereHas('attributes', function ($q) use ($attrId, $value) {
+                    $q->where('attribute_id', $attrId)
+                      ->where('value', $value);
+                });
+            }
         }
-        if ($request->filled('size')) {
-            $query->whereHas('attributes', function ($q) use ($request) {
-                $q->where('attribute_id', 2)->where('value', $request->size);
-            });
-        }
+    }
+
+    // Giữ lại code cũ (Color/Size) để backward compatibility nếu cần, 
+    // hoặc có thể xóa nếu Frontend đã chuyển hoàn toàn.
+    // Lọc theo Thuộc tính (Màu sắc/Size) - OLD
+    if ($request->filled('color')) {
+        $query->whereHas('attributes', function ($q) use ($request) {
+            $q->where('attribute_id', 1)->where('value', $request->color);
+        });
+    }
+    if ($request->filled('size')) {
+        $query->whereHas('attributes', function ($q) use ($request) {
+            $q->where('attribute_id', 2)->where('value', $request->size);
+        });
+    }
 
         // --- SẮP XẾP (SORT) ---
         switch ($request->sortBy) {
