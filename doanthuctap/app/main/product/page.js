@@ -211,13 +211,15 @@ export default function ProductPage() {
     }, [searchParams]);
 
     /* ===== LOAD PRODUCT ===== */
+    const currentPage = parseInt(searchParams.get("page")) || 1;
+
     const fetchProducts = useCallback(
-        async (page = 1) => {
+        async () => {
             setLoading(true);
             try {
                 const params = {
-                    page,
-                    per_page: 12,
+                    page: currentPage,
+                    per_page: 6,
                     sortBy: sortOption
                 };
 
@@ -234,7 +236,6 @@ export default function ProductPage() {
 
                 // Handle Dynamic Attributes
                 if (filters.attributes) {
-                    // Axios will serialize attributes: { 1: "Red" } -> attributes[1]=Red
                     params.attributes = filters.attributes;
                 }
 
@@ -255,16 +256,22 @@ export default function ProductPage() {
                 setLoading(false);
             }
         },
-        [searchTerm, filters, sortOption]
+        [searchTerm, filters, sortOption, currentPage]
     );
 
     useEffect(() => {
-        const t = setTimeout(() => fetchProducts(1), 400);
+        const t = setTimeout(() => fetchProducts(), 400);
         return () => clearTimeout(t);
     }, [fetchProducts]);
 
     const handleFilterChange = (key, value) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
+        // Reset page to 1 in URL when filter changes
+        const newParams = new URLSearchParams(searchParams);
+        if (newParams.get('page') !== '1') {
+            newParams.set('page', '1');
+            router.push(`/main/product?${newParams.toString()}`);
+        }
     };
 
     // Handle clicking a dynamic attribute filter
@@ -490,7 +497,13 @@ export default function ProductPage() {
                                 {[...Array(pagination.last_page)].map((_, i) => (
                                     <button
                                         key={i + 1}
-                                        onClick={() => fetchProducts(i + 1)}
+                                        onClick={() => {
+                                            const newParams = new URLSearchParams(searchParams);
+                                            newParams.set('page', i + 1);
+                                            router.push(`/main/product?${newParams.toString()}`);
+                                            // Scroll to top
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
                                         className={`size-10 rounded-lg font-bold text-sm transition-all ${pagination.current_page === i + 1
                                             ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                                             : "bg-white text-gray-600 hover:bg-gray-100"

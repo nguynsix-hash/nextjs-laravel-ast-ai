@@ -155,7 +155,7 @@ export default function Header() {
   const handleSearch = () => {
     if (!searchText.trim()) return;
     router.push(
-      `/main/product?search=${encodeURIComponent(searchText)}&page=1`
+      `/main/search?keyword=${encodeURIComponent(searchText)}&page=1`
     );
   };
 

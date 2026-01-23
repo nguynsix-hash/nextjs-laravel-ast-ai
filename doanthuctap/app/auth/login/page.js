@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
       setLoading(false);
 
       // Redirect admin dashboard
-      router.replace("/dashboard/admin");
+      router.replace("/dashboard");
     } catch (err) {
       setLoading(false);
       console.log(err);

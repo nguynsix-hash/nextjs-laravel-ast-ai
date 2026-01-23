@@ -101,4 +101,5 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     // URL sẽ là: http://localhost:8000/api/admin/users
     Route::apiResource('users', UserController::class);
     Route::apiResource('products', ProductController::class);
+    Route::get('dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index']); // ✅ Dashboard API
 });

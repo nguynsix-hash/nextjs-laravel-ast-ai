@@ -30,7 +30,7 @@ const AuthGuard = () => {
 export default function DashboardLayout({ children }) {
     return (
         // Đảm bảo toàn bộ ứng dụng chiếm ít nhất 100% chiều cao màn hình
-        <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-zinc-900">
+        <div className="min-h-screen flex flex-col bg-gray-50">
 
             {/* 👉 Bước 2: Thêm component Toaster để "lắng nghe" các lệnh toast.success/error */}
             <Toaster
@@ -67,9 +67,11 @@ export default function DashboardLayout({ children }) {
                     </div>
 
                     {/* 3. Footer component (Bottom of content) */}
-                    <Footer />
+                   
                 </main>
+                
             </div>
+             <Footer />
 
         </div>
     );

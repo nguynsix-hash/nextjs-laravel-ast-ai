@@ -7,6 +7,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\OrderDetail;
+use App\Models\ProductStore;
 
 class OrderController extends Controller
 {
@@ -155,6 +156,13 @@ class OrderController extends Controller
                     'discount' => $item['discount'] ?? 0,
                     'amount' => ($item['price'] * $item['qty']) - ($item['discount'] ?? 0),
                 ]);
+
+                // 2.1 🔻 Trừ tồn kho (Simple Logic)
+                $store = ProductStore::where('product_id', $item['product_id'])->first();
+                if ($store) {
+                    $store->qty = $store->qty - $item['qty'];
+                    $store->save();
+                }
             }
 
             // Load lại relation để gửi mail
